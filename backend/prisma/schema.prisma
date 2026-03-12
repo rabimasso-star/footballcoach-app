@@ -1,0 +1,153 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Coach {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  club      String?
+  createdAt DateTime @default(now())
+
+  teams     Team[]
+  drills    Drill[]
+  sessions  TrainingSession[]
+}
+
+model Team {
+  id                  String   @id @default(cuid())
+  coachId             String
+  name                String
+  ageGroup            String
+  competitionLevel    String
+  primaryFormation    String?
+  trainingDaysPerWeek Int?
+  primaryGoals        String? // JSON/text array
+
+  coach    Coach   @relation(fields: [coachId], references: [id])
+  players  Player[]
+  sessions TrainingSession[]
+}
+
+model Player {
+  id           String             @id @default(cuid())
+  teamId       String
+  name         String
+  dateOfBirth  DateTime?
+  positions    String? // JSON/text array
+  dominantFoot String?
+  notes        String?
+
+  team        Team              @relation(fields: [teamId], references: [id])
+  attributes  PlayerAttributeSet?
+}
+
+model PlayerAttributeSet {
+  playerId        String  @id
+  speed           Int
+  endurance       Int
+  strength        Int
+  dribbling       Int
+  passing         Int
+  shooting        Int
+  firstTouch      Int
+  tackling        Int
+  positioning     Int
+  decisionMaking  Int
+  confidence      Int
+  attitude        Int
+  strengths       String?
+  weaknesses      String?
+
+  player Player @relation(fields: [playerId], references: [id])
+}
+
+model Drill {
+  id             String   @id @default(cuid())
+  coachId        String?
+  name           String
+  description    String
+  objectives     String?
+  category       String
+  focusTags      String? // e.g. comma separated tags
+  difficulty     Int
+  minPlayers     Int
+  maxPlayers     Int?
+  durationMin    Int
+  intensity      Int
+  equipment      String?
+  pitchArea      String?
+  ageMin         Int?
+  ageMax         Int?
+  createdAt      DateTime @default(now())
+
+  coach          Coach?   @relation(fields: [coachId], references: [id])
+  blockDrills    TrainingBlockDrill[]
+}
+
+model TrainingSession {
+  id              String          @id @default(cuid())
+  teamId          String
+  coachId         String
+  date            DateTime
+  title           String
+  mainFocusTags   String?
+  durationMinutes Int
+  intensity       Int
+  createdBy       String
+  createdAt       DateTime        @default(now())
+
+  team    Team    @relation(fields: [teamId], references: [id])
+  coach   Coach   @relation(fields: [coachId], references: [id])
+  blocks  TrainingBlock[]
+  feedback SessionFeedback[]
+}
+
+model TrainingBlock {
+  id              String               @id @default(cuid())
+  sessionId       String
+  type            String
+  order           Int
+  durationMinutes Int
+  focusTags       String?
+  description     String?
+
+  session         TrainingSession      @relation(fields: [sessionId], references: [id])
+  drills          TrainingBlockDrill[]
+}
+
+model TrainingBlockDrill {
+  id                  String          @id @default(cuid())
+  blockId             String
+  drillId             String
+  order               Int
+  customNotes         String?
+  adjustmentForPlayers String? // JSON with player_ids to notes
+  aiSuggestions       String?
+
+  block  TrainingBlock @relation(fields: [blockId], references: [id])
+  drill  Drill         @relation(fields: [drillId], references: [id])
+}
+
+model SessionFeedback {
+  id         String          @id @default(cuid())
+  sessionId  String
+  playerId   String?
+  whatWorked String?
+  whatDidnt  String?
+  notes      String?
+
+  session    TrainingSession @relation(fields: [sessionId], references: [id])
+}
+
