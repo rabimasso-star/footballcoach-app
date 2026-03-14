@@ -33,7 +33,8 @@ model Team {
   competitionLevel    String
   primaryFormation    String?
   trainingDaysPerWeek Int?
-  primaryGoals        String? // JSON/text array
+  primaryGoals        String?
+  formationLayout     Json?
 
   coach    Coach   @relation(fields: [coachId], references: [id])
   players  Player[]
@@ -74,26 +75,30 @@ model PlayerAttributeSet {
 }
 
 model Drill {
-  id             String   @id @default(cuid())
-  coachId        String?
-  name           String
-  description    String
-  objectives     String?
-  category       String
-  focusTags      String? // e.g. comma separated tags
-  difficulty     Int
-  minPlayers     Int
-  maxPlayers     Int?
-  durationMin    Int
-  intensity      Int
-  equipment      String?
-  pitchArea      String?
-  ageMin         Int?
-  ageMax         Int?
-  createdAt      DateTime @default(now())
+  id          String               @id @default(cuid())
+  name        String
+  description String?
+  objectives  String?
+  category    String
+  focusTags   String?
+  difficulty  Int
+  minPlayers  Int
+  maxPlayers  Int
+  durationMin Int
+  intensity   Int
+  equipment   String?
+  pitchArea   String?
+  ageMin      Int?
+  ageMax      Int?
 
-  coach          Coach?   @relation(fields: [coachId], references: [id])
-  blockDrills    TrainingBlockDrill[]
+  layout      Json?
+
+  coachId     String?
+  coach       Coach?               @relation(fields: [coachId], references: [id])
+  blockDrills TrainingBlockDrill[]
+
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
 }
 
 model TrainingSession {

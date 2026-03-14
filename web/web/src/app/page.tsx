@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { API_BASE_URL } from "@/lib/api";
+import { API_BASE_URL } from "@/src/lib/api";
 
 type TeamListItem = {
   id: string;
@@ -69,20 +69,6 @@ export default async function HomePage() {
           >
             Create team profile
           </Link>
-
-          <Link
-            href="/drills"
-            style={{
-              background: "#e2e8f0",
-              color: "#0f172a",
-              padding: "12px 18px",
-              borderRadius: 12,
-              textDecoration: "none",
-              fontWeight: 600,
-            }}
-          >
-            Drill library
-          </Link>
         </div>
       </section>
 
@@ -92,7 +78,6 @@ export default async function HomePage() {
           borderRadius: 20,
           padding: 24,
           background: "#fff",
-          color: "#0f172a",
         }}
       >
         <div
