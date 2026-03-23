@@ -1,8 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client"
   output   = "../generated/prisma"
@@ -42,34 +37,34 @@ model Team {
 }
 
 model Player {
-  id           String             @id @default(cuid())
+  id           String              @id @default(cuid())
   teamId       String
   name         String
   dateOfBirth  DateTime?
-  positions    String? // JSON/text array
+  positions    String?
   dominantFoot String?
   notes        String?
 
-  team        Team              @relation(fields: [teamId], references: [id])
-  attributes  PlayerAttributeSet?
+  team       Team               @relation(fields: [teamId], references: [id])
+  attributes PlayerAttributeSet?
 }
 
 model PlayerAttributeSet {
-  playerId        String  @id
-  speed           Int
-  endurance       Int
-  strength        Int
-  dribbling       Int
-  passing         Int
-  shooting        Int
-  firstTouch      Int
-  tackling        Int
-  positioning     Int
-  decisionMaking  Int
-  confidence      Int
-  attitude        Int
-  strengths       String?
-  weaknesses      String?
+  playerId       String @id
+  speed          Int
+  endurance      Int
+  strength       Int
+  dribbling      Int
+  passing        Int
+  shooting       Int
+  firstTouch     Int
+  tackling       Int
+  positioning    Int
+  decisionMaking Int
+  confidence     Int
+  attitude       Int
+  strengths      String?
+  weaknesses     String?
 
   player Player @relation(fields: [playerId], references: [id])
 }
@@ -90,7 +85,7 @@ model Drill {
   pitchArea   String?
   ageMin      Int?
   ageMax      Int?
-
+  imageUrl    String?
   layout      Json?
 
   coachId     String?
@@ -102,7 +97,7 @@ model Drill {
 }
 
 model TrainingSession {
-  id              String          @id @default(cuid())
+  id              String            @id @default(cuid())
   teamId          String
   coachId         String
   date            DateTime
@@ -111,11 +106,11 @@ model TrainingSession {
   durationMinutes Int
   intensity       Int
   createdBy       String
-  createdAt       DateTime        @default(now())
+  createdAt       DateTime          @default(now())
 
-  team    Team    @relation(fields: [teamId], references: [id])
-  coach   Coach   @relation(fields: [coachId], references: [id])
-  blocks  TrainingBlock[]
+  team     Team              @relation(fields: [teamId], references: [id])
+  coach    Coach             @relation(fields: [coachId], references: [id])
+  blocks   TrainingBlock[]
   feedback SessionFeedback[]
 }
 
@@ -133,16 +128,16 @@ model TrainingBlock {
 }
 
 model TrainingBlockDrill {
-  id                  String          @id @default(cuid())
-  blockId             String
-  drillId             String
-  order               Int
-  customNotes         String?
-  adjustmentForPlayers String? // JSON with player_ids to notes
-  aiSuggestions       String?
+  id                   String        @id @default(cuid())
+  blockId              String
+  drillId              String
+  order                Int
+  customNotes          String?
+  adjustmentForPlayers String?
+  aiSuggestions        String?
 
-  block  TrainingBlock @relation(fields: [blockId], references: [id])
-  drill  Drill         @relation(fields: [drillId], references: [id])
+  block TrainingBlock @relation(fields: [blockId], references: [id])
+  drill Drill         @relation(fields: [drillId], references: [id])
 }
 
 model SessionFeedback {
@@ -153,6 +148,5 @@ model SessionFeedback {
   whatDidnt  String?
   notes      String?
 
-  session    TrainingSession @relation(fields: [sessionId], references: [id])
+  session TrainingSession @relation(fields: [sessionId], references: [id])
 }
-

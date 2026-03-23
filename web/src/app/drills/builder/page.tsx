@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { toPng } from "html-to-image";
 import { apiFetch } from "@/lib/api";
 
 type BoardItemType = "player" | "cone" | "ball";
@@ -31,12 +32,23 @@ type DrillLayout = {
   updatedAt: string;
 };
 
+type DrillSummary = {
+  id: string;
+  name: string;
+};
+
+type DraggingLinePoint = {
+  lineId: string;
+  point: "start" | "end";
+} | null;
+
 const FIELD_WIDTH = 900;
 const FIELD_HEIGHT = 560;
 
 export default function DrillBuilderPage() {
   const searchParams = useSearchParams();
   const drillId = searchParams.get("drillId");
+  const exportRef = useRef<HTMLDivElement | null>(null);
 
   const [selectedTool, setSelectedTool] = useState<DrawingTool>("player");
   const [items, setItems] = useState<BoardItem[]>([]);
@@ -44,6 +56,8 @@ export default function DrillBuilderPage() {
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [selectedLineId, setSelectedLineId] = useState<string | null>(null);
   const [draggingItemId, setDraggingItemId] = useState<string | null>(null);
+  const [draggingLinePoint, setDraggingLinePoint] =
+    useState<DraggingLinePoint>(null);
   const [pendingLineStart, setPendingLineStart] = useState<{
     x: number;
     y: number;
@@ -53,6 +67,9 @@ export default function DrillBuilderPage() {
   const [hasLoadedLayout, setHasLoadedLayout] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingLayout, setIsLoadingLayout] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [drillName, setDrillName] = useState("");
+  const [isLoadingDrill, setIsLoadingDrill] = useState(false);
 
   const selectedItem = useMemo(
     () => items.find((item) => item.id === selectedItemId) || null,
@@ -89,10 +106,9 @@ export default function DrillBuilderPage() {
   }
 
   function handleFieldClick(event: React.MouseEvent<HTMLDivElement>) {
-    if (draggingItemId) return;
+    if (draggingItemId || draggingLinePoint) return;
 
     const { x, y } = getRelativePosition(event);
-
     clearSelection();
 
     if (selectedTool === "arrow" || selectedTool === "movement") {
@@ -141,26 +157,48 @@ export default function DrillBuilderPage() {
     setDraggingItemId(itemId);
   }
 
-  function handleMouseMove(event: React.MouseEvent<HTMLDivElement>) {
-    if (!draggingItemId) return;
+  function handleMouseDownOnLinePoint(
+    event: React.MouseEvent<HTMLButtonElement>,
+    lineId: string,
+    point: "start" | "end",
+  ) {
+    event.preventDefault();
+    event.stopPropagation();
+    setSelectedLineId(lineId);
+    setSelectedItemId(null);
+    setDraggingLinePoint({ lineId, point });
+  }
 
+  function handleMouseMove(event: React.MouseEvent<HTMLDivElement>) {
     const { x, y } = getRelativePosition(event);
 
-    setItems((prev) =>
-      prev.map((item) =>
-        item.id === draggingItemId
-          ? {
-              ...item,
-              x,
-              y,
-            }
-          : item,
-      ),
-    );
+    if (draggingItemId) {
+      setItems((prev) =>
+        prev.map((item) =>
+          item.id === draggingItemId ? { ...item, x, y } : item,
+        ),
+      );
+      return;
+    }
+
+    if (draggingLinePoint) {
+      setLines((prev) =>
+        prev.map((line) => {
+          if (line.id !== draggingLinePoint.lineId) return line;
+
+          if (draggingLinePoint.point === "start") {
+            return { ...line, x1: x, y1: y };
+          }
+
+          return { ...line, x2: x, y2: y };
+        }),
+      );
+    }
   }
 
   function handleMouseUp() {
     setDraggingItemId(null);
+    setDraggingLinePoint(null);
   }
 
   function updateSelectedLabel(value: string) {
@@ -175,14 +213,12 @@ export default function DrillBuilderPage() {
 
   function deleteSelectedItem() {
     if (!selectedItemId) return;
-
     setItems((prev) => prev.filter((item) => item.id !== selectedItemId));
     setSelectedItemId(null);
   }
 
   function deleteSelectedLine() {
     if (!selectedLineId) return;
-
     setLines((prev) => prev.filter((line) => line.id !== selectedLineId));
     setSelectedLineId(null);
   }
@@ -193,12 +229,57 @@ export default function DrillBuilderPage() {
     setSelectedItemId(null);
     setSelectedLineId(null);
     setDraggingItemId(null);
+    setDraggingLinePoint(null);
     setPendingLineStart(null);
     setSaveMessage("");
   }
 
   function cancelPendingLine() {
     setPendingLineStart(null);
+  }
+
+  function slugify(value: string) {
+    return value
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9åäö\s-]/gi, "")
+      .replace(/\s+/g, "-")
+      .replace(/-+/g, "-");
+  }
+
+  async function exportBoardAsPng() {
+    if (!exportRef.current) {
+      setSaveMessage("Could not export board.");
+      return;
+    }
+
+    try {
+      setIsExporting(true);
+      setSelectedItemId(null);
+      setSelectedLineId(null);
+
+      const dataUrl = await toPng(exportRef.current, {
+        cacheBust: true,
+        pixelRatio: 2,
+      });
+
+      const link = document.createElement("a");
+      const filenameBase = drillName
+        ? slugify(drillName)
+        : drillId
+          ? `drill-${drillId}`
+          : "drill-board";
+
+      link.download = `${filenameBase}.png`;
+      link.href = dataUrl;
+      link.click();
+
+      setSaveMessage("Board exported as PNG.");
+    } catch {
+      setSaveMessage("Could not export board.");
+    } finally {
+      setIsExporting(false);
+    }
   }
 
   async function saveLayout() {
@@ -238,7 +319,9 @@ export default function DrillBuilderPage() {
     try {
       setIsLoadingLayout(true);
 
-      const data = await apiFetch<DrillLayout | null>(`/drills/${drillId}/layout`);
+      const data = await apiFetch<DrillLayout | null>(
+        `/drills/${drillId}/layout`,
+      );
 
       if (!data) {
         setSaveMessage("No saved layout found for this drill.");
@@ -250,6 +333,7 @@ export default function DrillBuilderPage() {
       setSelectedItemId(null);
       setSelectedLineId(null);
       setDraggingItemId(null);
+      setDraggingLinePoint(null);
       setPendingLineStart(null);
       setSaveMessage("Saved layout loaded.");
     } catch {
@@ -284,6 +368,7 @@ export default function DrillBuilderPage() {
       setSelectedItemId(null);
       setSelectedLineId(null);
       setDraggingItemId(null);
+      setDraggingLinePoint(null);
       setPendingLineStart(null);
       setSaveMessage("Saved layout removed.");
     } catch {
@@ -294,11 +379,52 @@ export default function DrillBuilderPage() {
   }
 
   useEffect(() => {
+    if (!drillId) {
+      setDrillName("");
+      return;
+    }
+
+    let isMounted = true;
+
+    async function loadDrill() {
+      try {
+        setIsLoadingDrill(true);
+        const data = await apiFetch<DrillSummary>(`/drills/${drillId}`);
+        if (!isMounted) return;
+        setDrillName(data?.name || "");
+      } catch {
+        if (!isMounted) return;
+        setDrillName("");
+      } finally {
+        if (!isMounted) return;
+        setIsLoadingDrill(false);
+      }
+    }
+
+    loadDrill();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [drillId]);
+
+  useEffect(() => {
+    if (!drillId) return;
+    setHasLoadedLayout(false);
+  }, [drillId]);
+
+  useEffect(() => {
     if (!drillId || hasLoadedLayout) return;
+
+    let isMounted = true;
 
     async function autoLoad() {
       try {
-        const data = await apiFetch<DrillLayout | null>(`/drills/${drillId}/layout`);
+        const data = await apiFetch<DrillLayout | null>(
+          `/drills/${drillId}/layout`,
+        );
+
+        if (!isMounted) return;
 
         if (data) {
           setItems(Array.isArray(data.items) ? data.items : []);
@@ -306,13 +432,19 @@ export default function DrillBuilderPage() {
           setSaveMessage("Saved layout loaded automatically.");
         }
       } catch {
+        if (!isMounted) return;
         setSaveMessage("Could not auto-load saved layout.");
       } finally {
+        if (!isMounted) return;
         setHasLoadedLayout(true);
       }
     }
 
     autoLoad();
+
+    return () => {
+      isMounted = false;
+    };
   }, [drillId, hasLoadedLayout]);
 
   return (
@@ -340,7 +472,11 @@ export default function DrillBuilderPage() {
             fontWeight: 700,
           }}
         >
-          {drillId ? `Connected drill: ${drillId}` : "No drill selected"}
+          {drillId
+            ? isLoadingDrill
+              ? "Loading drill..."
+              : `Connected drill: ${drillName || drillId}`
+            : "No drill selected"}
         </div>
       </div>
 
@@ -405,7 +541,6 @@ export default function DrillBuilderPage() {
                 setPendingLineStart(null);
               }}
             />
-
             <button
               type="button"
               className="secondary-button"
@@ -440,42 +575,50 @@ export default function DrillBuilderPage() {
               overflow: "hidden",
               border: "4px solid #d1fae5",
               userSelect: "none",
-              cursor: "crosshair",
+              cursor: draggingLinePoint ? "grabbing" : "crosshair",
             }}
           >
-            <PitchLines />
-
-            <svg
-              viewBox={`0 0 ${FIELD_WIDTH} ${FIELD_HEIGHT}`}
+            <div
+              ref={exportRef}
               style={{
                 position: "absolute",
                 inset: 0,
-                width: "100%",
-                height: "100%",
-                pointerEvents: "none",
-                zIndex: 1,
+                background: "#3f8f47",
               }}
             >
-              <defs>
-                <marker
-                  id="arrowhead"
-                  markerWidth="10"
-                  markerHeight="10"
-                  refX="8"
-                  refY="3"
-                  orient="auto"
-                >
-                  <polygon points="0 0, 8 3, 0 6" fill="#0f172a" />
-                </marker>
-              </defs>
+              <PitchLines />
 
-              {lines.map((line) => {
-                const isSelected = line.id === selectedLineId;
+              <svg
+                viewBox={`0 0 ${FIELD_WIDTH} ${FIELD_HEIGHT}`}
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  width: "100%",
+                  height: "100%",
+                  pointerEvents: "none",
+                  zIndex: 1,
+                }}
+              >
+                <defs>
+                  <marker
+                    id="arrowhead"
+                    markerWidth="10"
+                    markerHeight="10"
+                    refX="8"
+                    refY="3"
+                    orient="auto"
+                  >
+                    <polygon points="0 0, 8 3, 0 6" fill="#0f172a" />
+                  </marker>
+                </defs>
 
-                if (line.type === "arrow") {
-                  return (
-                    <g key={line.id}>
+                {lines.map((line) => {
+                  const isSelected = line.id === selectedLineId;
+
+                  if (line.type === "arrow") {
+                    return (
                       <line
+                        key={line.id}
                         x1={line.x1}
                         y1={line.y1}
                         x2={line.x2}
@@ -484,13 +627,12 @@ export default function DrillBuilderPage() {
                         strokeWidth={isSelected ? 5 : 4}
                         markerEnd="url(#arrowhead)"
                       />
-                    </g>
-                  );
-                }
+                    );
+                  }
 
-                return (
-                  <g key={line.id}>
+                  return (
                     <line
+                      key={line.id}
                       x1={line.x1}
                       y1={line.y1}
                       x2={line.x2}
@@ -499,86 +641,140 @@ export default function DrillBuilderPage() {
                       strokeWidth={isSelected ? 5 : 4}
                       strokeDasharray="10 8"
                     />
-                  </g>
-                );
-              })}
+                  );
+                })}
 
-              {pendingLineStart &&
-              (selectedTool === "arrow" || selectedTool === "movement") ? (
-                <circle
-                  cx={pendingLineStart.x}
-                  cy={pendingLineStart.y}
-                  r="8"
-                  fill="#f8fafc"
-                  stroke="#1d4ed8"
-                  strokeWidth="3"
-                />
-              ) : null}
-            </svg>
-
-            <div
-              style={{
-                position: "absolute",
-                inset: 0,
-                zIndex: 2,
-              }}
-            >
-              {lines.map((line) => {
-                const midX = (line.x1 + line.x2) / 2;
-                const midY = (line.y1 + line.y2) / 2;
-                const isSelected = line.id === selectedLineId;
-
-                return (
-                  <button
-                    key={line.id}
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      setSelectedLineId(line.id);
-                      setSelectedItemId(null);
-                    }}
-                    style={{
-                      position: "absolute",
-                      left: `${(midX / FIELD_WIDTH) * 100}%`,
-                      top: `${(midY / FIELD_HEIGHT) * 100}%`,
-                      transform: "translate(-50%, -50%)",
-                      width: 22,
-                      height: 22,
-                      borderRadius: "50%",
-                      border: isSelected ? "3px solid #bfdbfe" : "2px solid #fff",
-                      background: isSelected ? "#1d4ed8" : "rgba(15,23,42,0.72)",
-                      cursor: "pointer",
-                      padding: 0,
-                    }}
+                {pendingLineStart &&
+                (selectedTool === "arrow" || selectedTool === "movement") ? (
+                  <circle
+                    cx={pendingLineStart.x}
+                    cy={pendingLineStart.y}
+                    r="8"
+                    fill="#f8fafc"
+                    stroke="#1d4ed8"
+                    strokeWidth="3"
                   />
-                );
-              })}
+                ) : null}
+              </svg>
 
-              {items.map((item) => {
-                const isSelected = item.id === selectedItemId;
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  zIndex: 2,
+                }}
+              >
+                {lines.map((line) => {
+                  const isSelected = line.id === selectedLineId;
+                  const midX = (line.x1 + line.x2) / 2;
+                  const midY = (line.y1 + line.y2) / 2;
 
-                return (
-                  <div
-                    key={item.id}
-                    onMouseDown={(event) => handleMouseDownOnItem(event, item.id)}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      setSelectedItemId(item.id);
-                      setSelectedLineId(null);
-                    }}
-                    style={{
-                      position: "absolute",
-                      left: `${(item.x / FIELD_WIDTH) * 100}%`,
-                      top: `${(item.y / FIELD_HEIGHT) * 100}%`,
-                      transform: "translate(-50%, -50%)",
-                      cursor: "grab",
-                      zIndex: isSelected ? 4 : 3,
-                    }}
-                  >
-                    {renderBoardItem(item, isSelected)}
-                  </div>
-                );
-              })}
+                  return (
+                    <div key={`controls-${line.id}`}>
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setSelectedLineId(line.id);
+                          setSelectedItemId(null);
+                        }}
+                        title="Select line"
+                        style={{
+                          position: "absolute",
+                          left: `${(midX / FIELD_WIDTH) * 100}%`,
+                          top: `${(midY / FIELD_HEIGHT) * 100}%`,
+                          transform: "translate(-50%, -50%)",
+                          width: 24,
+                          height: 24,
+                          borderRadius: "50%",
+                          border: isSelected ? "3px solid #bfdbfe" : "2px solid #fff",
+                          background: isSelected ? "#1d4ed8" : "rgba(15,23,42,0.72)",
+                          cursor: "pointer",
+                          padding: 0,
+                        }}
+                      />
+
+                      {isSelected ? (
+                        <>
+                          <button
+                            type="button"
+                            onMouseDown={(event) =>
+                              handleMouseDownOnLinePoint(event, line.id, "start")
+                            }
+                            onClick={(event) => event.stopPropagation()}
+                            title="Drag line start"
+                            style={{
+                              position: "absolute",
+                              left: `${(line.x1 / FIELD_WIDTH) * 100}%`,
+                              top: `${(line.y1 / FIELD_HEIGHT) * 100}%`,
+                              transform: "translate(-50%, -50%)",
+                              width: 24,
+                              height: 24,
+                              borderRadius: "50%",
+                              border: "3px solid #1d4ed8",
+                              background: "#ffffff",
+                              cursor: "grab",
+                              padding: 0,
+                              zIndex: 5,
+                              boxShadow: "0 4px 10px rgba(0,0,0,0.18)",
+                            }}
+                          />
+
+                          <button
+                            type="button"
+                            onMouseDown={(event) =>
+                              handleMouseDownOnLinePoint(event, line.id, "end")
+                            }
+                            onClick={(event) => event.stopPropagation()}
+                            title="Drag line end"
+                            style={{
+                              position: "absolute",
+                              left: `${(line.x2 / FIELD_WIDTH) * 100}%`,
+                              top: `${(line.y2 / FIELD_HEIGHT) * 100}%`,
+                              transform: "translate(-50%, -50%)",
+                              width: 24,
+                              height: 24,
+                              borderRadius: "50%",
+                              border: "3px solid #1d4ed8",
+                              background: "#ffffff",
+                              cursor: "grab",
+                              padding: 0,
+                              zIndex: 5,
+                              boxShadow: "0 4px 10px rgba(0,0,0,0.18)",
+                            }}
+                          />
+                        </>
+                      ) : null}
+                    </div>
+                  );
+                })}
+
+                {items.map((item) => {
+                  const isSelected = item.id === selectedItemId;
+
+                  return (
+                    <div
+                      key={item.id}
+                      onMouseDown={(event) => handleMouseDownOnItem(event, item.id)}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setSelectedItemId(item.id);
+                        setSelectedLineId(null);
+                      }}
+                      style={{
+                        position: "absolute",
+                        left: `${(item.x / FIELD_WIDTH) * 100}%`,
+                        top: `${(item.y / FIELD_HEIGHT) * 100}%`,
+                        transform: "translate(-50%, -50%)",
+                        cursor: "grab",
+                        zIndex: isSelected ? 4 : 3,
+                      }}
+                    >
+                      {renderBoardItem(item, isSelected)}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </section>
@@ -605,7 +801,9 @@ export default function DrillBuilderPage() {
 
               <p style={{ margin: 0, color: "#475569" }}>
                 {drillId
-                  ? "This board is linked to a specific drill."
+                  ? `This board is linked to ${
+                      drillName || "a specific drill"
+                    }.`
                   : "Open the builder from a specific drill to save a linked layout."}
               </p>
 
@@ -635,6 +833,15 @@ export default function DrillBuilderPage() {
                   disabled={isSaving}
                 >
                   Delete saved layout
+                </button>
+
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={exportBoardAsPng}
+                  disabled={isExporting}
+                >
+                  {isExporting ? "Exporting..." : "Export as PNG"}
                 </button>
               </div>
 
@@ -669,6 +876,25 @@ export default function DrillBuilderPage() {
                 >
                   Cancel line
                 </button>
+              </div>
+            ) : null}
+
+            {selectedLine ? (
+              <div
+                style={{
+                  borderRadius: 14,
+                  background: "#eff6ff",
+                  border: "1px solid #bfdbfe",
+                  padding: "12px 14px",
+                  display: "grid",
+                  gap: 8,
+                }}
+              >
+                <p style={{ margin: 0, fontWeight: 700 }}>Line editing enabled</p>
+                <p style={{ margin: 0, color: "#334155" }}>
+                  Click the middle marker to select a line. Then drag the two white
+                  handles to move the start and end points.
+                </p>
               </div>
             ) : null}
 
@@ -761,7 +987,13 @@ export default function DrillBuilderPage() {
                 4. Drag objects to move them.
               </p>
               <p style={{ margin: 0, color: "#475569" }}>
-                5. Save the layout to the connected drill.
+                5. Click the marker in the middle of a line to select it.
+              </p>
+              <p style={{ margin: 0, color: "#475569" }}>
+                6. Drag the two white handles to edit the line.
+              </p>
+              <p style={{ margin: 0, color: "#475569" }}>
+                7. Export the board as a PNG image.
               </p>
             </div>
           </div>
@@ -782,7 +1014,6 @@ function PitchLines() {
           borderRadius: 16,
         }}
       />
-
       <div
         style={{
           position: "absolute",
@@ -794,7 +1025,6 @@ function PitchLines() {
           transform: "translateX(-50%)",
         }}
       />
-
       <div
         style={{
           position: "absolute",
@@ -807,7 +1037,6 @@ function PitchLines() {
           transform: "translate(-50%, -50%)",
         }}
       />
-
       <div
         style={{
           position: "absolute",
@@ -820,7 +1049,6 @@ function PitchLines() {
           transform: "translateY(-50%)",
         }}
       />
-
       <div
         style={{
           position: "absolute",
@@ -870,7 +1098,9 @@ function renderBoardItem(item: BoardItem, isSelected: boolean) {
           borderLeft: "14px solid transparent",
           borderRight: "14px solid transparent",
           borderBottom: isSelected ? "30px solid #f97316" : "30px solid #fb923c",
-          filter: isSelected ? "drop-shadow(0 0 0.5rem rgba(249,115,22,0.55))" : "none",
+          filter: isSelected
+            ? "drop-shadow(0 0 0.5rem rgba(249,115,22,0.55))"
+            : "none",
         }}
       />
     );

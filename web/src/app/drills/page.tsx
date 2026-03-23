@@ -57,7 +57,8 @@ export default function DrillsPage() {
         String(drill.focusTags || "").toLowerCase().includes(searchText);
 
       const matchesCategory =
-        !category || drill.category.toLowerCase() === category.toLowerCase();
+        !category ||
+        drill.category.toLowerCase() === category.toLowerCase();
 
       const matchesDifficulty =
         !difficulty || drill.difficulty === Number(difficulty);
@@ -66,6 +67,7 @@ export default function DrillsPage() {
         !intensity || drill.intensity === Number(intensity);
 
       const selectedAge = age ? Number(age) : null;
+
       const matchesAge =
         selectedAge == null ||
         ((drill.ageMin == null || drill.ageMin <= selectedAge) &&
@@ -84,7 +86,10 @@ export default function DrillsPage() {
   return (
     <main className="page-shell">
       <div style={{ marginBottom: 20 }}>
-        <Link href="/" style={{ color: "#334155", textDecoration: "none" }}>
+        <Link
+          href="/"
+          style={{ color: "#334155", textDecoration: "none" }}
+        >
           ← Back to dashboard
         </Link>
       </div>
@@ -103,7 +108,9 @@ export default function DrillsPage() {
             <p className="badge badge-blue" style={{ marginBottom: 12 }}>
               Drill library
             </p>
+
             <h1 className="section-title">Football drills</h1>
+
             <p className="section-subtitle">
               Browse, search and filter your coaching drill library.
             </p>
@@ -111,19 +118,19 @@ export default function DrillsPage() {
 
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
             <Link
-              href="/drills/builder"
-              className="secondary-button"
-              style={{ textDecoration: "none" }}
-            >
-              Open drill builder
-            </Link>
-
-            <Link
               href="/drills/new"
               className="primary-button"
               style={{ textDecoration: "none" }}
             >
               Add drill
+            </Link>
+
+            <Link
+              href="/drills/builder"
+              className="secondary-button"
+              style={{ textDecoration: "none" }}
+            >
+              Open empty builder
             </Link>
           </div>
         </div>
@@ -132,236 +139,109 @@ export default function DrillsPage() {
       <section className="card" style={{ padding: 28, marginBottom: 24 }}>
         <h2 style={{ fontSize: 24, marginBottom: 16 }}>Filters</h2>
 
-        <div className="form-grid">
-          <div style={{ display: "grid", gap: 8 }}>
-            <label htmlFor="search" style={{ fontWeight: 600 }}>
-              Search
-            </label>
-            <input
-              id="search"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="passing, rondo, finishing..."
-            />
-          </div>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+            gap: 12,
+          }}
+        >
+          <input
+            placeholder="Search drills..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
 
-          <div style={{ display: "grid", gap: 8 }}>
-            <label htmlFor="category" style={{ fontWeight: 600 }}>
-              Category
-            </label>
-            <select
-              id="category"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-            >
-              <option value="">All</option>
-              <option value="warmup">Warmup</option>
-              <option value="technical">Technical</option>
-              <option value="possession">Possession</option>
-              <option value="finishing">Finishing</option>
-              <option value="game">Game</option>
-            </select>
-          </div>
+          <input
+            placeholder="Category"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+          />
 
-          <div style={{ display: "grid", gap: 8 }}>
-            <label htmlFor="difficulty" style={{ fontWeight: 600 }}>
-              Difficulty
-            </label>
-            <select
-              id="difficulty"
-              value={difficulty}
-              onChange={(e) => setDifficulty(e.target.value)}
-            >
-              <option value="">All</option>
-              <option value="1">1</option>
-              <option value="2">2</option>
-              <option value="3">3</option>
-              <option value="4">4</option>
-              <option value="5">5</option>
-            </select>
-          </div>
+          <input
+            placeholder="Difficulty"
+            value={difficulty}
+            onChange={(e) => setDifficulty(e.target.value)}
+          />
 
-          <div style={{ display: "grid", gap: 8 }}>
-            <label htmlFor="intensity" style={{ fontWeight: 600 }}>
-              Intensity
-            </label>
-            <select
-              id="intensity"
-              value={intensity}
-              onChange={(e) => setIntensity(e.target.value)}
-            >
-              <option value="">All</option>
-              <option value="1">1</option>
-              <option value="2">2</option>
-              <option value="3">3</option>
-            </select>
-          </div>
+          <input
+            placeholder="Intensity"
+            value={intensity}
+            onChange={(e) => setIntensity(e.target.value)}
+          />
 
-          <div style={{ display: "grid", gap: 8 }}>
-            <label htmlFor="age" style={{ fontWeight: 600 }}>
-              Age
-            </label>
-            <input
-              id="age"
-              type="number"
-              min={4}
-              max={18}
-              value={age}
-              onChange={(e) => setAge(e.target.value)}
-              placeholder="e.g. 10"
-            />
-          </div>
-        </div>
-
-        <div style={{ marginTop: 16 }}>
-          <button
-            type="button"
-            className="secondary-button"
-            onClick={() => {
-              setSearch("");
-              setCategory("");
-              setDifficulty("");
-              setIntensity("");
-              setAge("");
-            }}
-          >
-            Clear filters
-          </button>
+          <input
+            placeholder="Age"
+            value={age}
+            onChange={(e) => setAge(e.target.value)}
+          />
         </div>
       </section>
 
       <section className="card" style={{ padding: 28 }}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            gap: 16,
-            flexWrap: "wrap",
-            alignItems: "center",
-            marginBottom: 20,
-          }}
-        >
-          <h2 style={{ fontSize: 24, margin: 0 }}>Results</h2>
-
-          <span
+        {isLoading ? (
+          <p>Loading drills...</p>
+        ) : filteredDrills.length === 0 ? (
+          <p>No drills found.</p>
+        ) : (
+          <div
             style={{
-              padding: "8px 12px",
-              borderRadius: 999,
-              background: "#f8fafc",
-              color: "#334155",
-              fontWeight: 700,
+              display: "grid",
+              gap: 16,
             }}
           >
-            {filteredDrills.length} drill{filteredDrills.length === 1 ? "" : "s"}
-          </span>
-        </div>
-
-        {isLoading ? (
-          <p style={{ color: "#64748b" }}>Loading drills...</p>
-        ) : filteredDrills.length === 0 ? (
-          <p style={{ color: "#64748b" }}>No drills match your filters.</p>
-        ) : (
-          <div style={{ display: "grid", gap: 16 }}>
             {filteredDrills.map((drill) => (
-              <article
+              <div
                 key={drill.id}
                 style={{
+                  padding: 16,
                   border: "1px solid #e2e8f0",
-                  borderRadius: 18,
-                  padding: 18,
-                  background: "#f8fafc",
+                  borderRadius: 12,
+                  background: "#fff",
+                  display: "grid",
+                  gap: 12,
                 }}
               >
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    gap: 16,
-                    flexWrap: "wrap",
-                    marginBottom: 10,
-                  }}
-                >
-                  <div>
-                    <h2 style={{ fontSize: 22, margin: "0 0 6px" }}>
-                      {drill.name}
-                    </h2>
-                    <p style={{ color: "#475569", margin: 0 }}>
-                      {capitalize(drill.category)} · {drill.durationMin} min ·
-                      Difficulty {drill.difficulty}/5
-                    </p>
-                  </div>
+                <div>
+                  <h3 style={{ marginBottom: 6 }}>{drill.name}</h3>
 
-                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                    <Link
-                      href={`/drills/${drill.id}`}
-                      className="secondary-button"
-                    >
-                      View drill
-                    </Link>
-
-                    <Link
-                      href={`/drills/builder?drillId=${drill.id}`}
-                      className="secondary-button"
-                      style={{ textDecoration: "none" }}
-                    >
-                      Open builder
-                    </Link>
-                  </div>
-                </div>
-
-                {drill.description ? (
-                  <p style={{ color: "#334155", marginBottom: 10 }}>
-                    {drill.description}
+                  <p style={{ marginBottom: 8, color: "#475569" }}>
+                    {drill.description || "No description yet."}
                   </p>
-                ) : null}
 
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-                    gap: 10,
-                  }}
-                >
-                  <Meta label="Focus" value={drill.focusTags || "Not set"} />
-                  <Meta
-                    label="Players"
-                    value={`${drill.minPlayers}-${drill.maxPlayers}`}
-                  />
-                  <Meta
-                    label="Age"
-                    value={
-                      drill.ageMin != null && drill.ageMax != null
-                        ? `${drill.ageMin}-${drill.ageMax}`
-                        : "Not set"
-                    }
-                  />
-                  <Meta label="Intensity" value={`${drill.intensity}/3`} />
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: 12,
+                      flexWrap: "wrap",
+                      fontSize: 14,
+                      color: "#64748b",
+                    }}
+                  >
+                    <span>Category: {drill.category}</span>
+                    <span>
+                      Players: {drill.minPlayers}-{drill.maxPlayers}
+                    </span>
+                    <span>Duration: {drill.durationMin} min</span>
+                    <span>Difficulty: {drill.difficulty}</span>
+                    <span>Intensity: {drill.intensity}</span>
+                  </div>
                 </div>
-              </article>
+
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                  <Link
+                    href={`/drills/builder?drillId=${drill.id}`}
+                    className="primary-button"
+                    style={{ textDecoration: "none" }}
+                  >
+                    Open in builder
+                  </Link>
+                </div>
+              </div>
             ))}
           </div>
         )}
       </section>
     </main>
   );
-}
-
-function Meta({ label, value }: { label: string; value: string }) {
-  return (
-    <div
-      style={{
-        borderRadius: 14,
-        background: "#fff",
-        border: "1px solid #e2e8f0",
-        padding: "12px 14px",
-      }}
-    >
-      <p style={{ color: "#64748b", marginBottom: 6 }}>{label}</p>
-      <p style={{ margin: 0, fontWeight: 700 }}>{value}</p>
-    </div>
-  );
-}
-
-function capitalize(value: string) {
-  return value.charAt(0).toUpperCase() + value.slice(1);
 }

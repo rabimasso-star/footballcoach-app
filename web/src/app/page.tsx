@@ -1,184 +1,135 @@
 import Link from "next/link";
-import { API_BASE_URL } from "@/lib/api";
 
-type TeamListItem = {
-  id: string;
-  name: string;
-  ageGroup: string;
-  competitionLevel: string;
-  primaryFormation?: string | null;
-  trainingDaysPerWeek?: number | null;
-};
-
-async function fetchTeams(): Promise<TeamListItem[]> {
-  const response = await fetch(`${API_BASE_URL}/teams`, {
-    cache: "no-store",
-  });
-
-  if (!response.ok) {
-    return [];
-  }
-
-  return response.json();
-}
-
-export default async function HomePage() {
-  const teams = await fetchTeams();
-
+export default function HomePage() {
   return (
-    <main style={{ maxWidth: 960, margin: "0 auto", padding: "48px 24px" }}>
-      <section style={{ marginBottom: 32 }}>
-        <p
-          style={{
-            display: "inline-block",
-            marginBottom: 12,
-            padding: "6px 10px",
-            borderRadius: 999,
-            background: "#eef2ff",
-            color: "#3730a3",
-            fontSize: 12,
-            fontWeight: 700,
-            letterSpacing: 0.4,
-            textTransform: "uppercase",
-          }}
-        >
-          Football Coach AI
-        </p>
-
-        <h1 style={{ fontSize: 40, lineHeight: 1.1, marginBottom: 12 }}>
-          Build better training sessions for your team.
-        </h1>
-
-        <p style={{ fontSize: 18, color: "#475569", maxWidth: 760 }}>
-          Start by creating a team profile. Add the age group, level,
-          formation, training frequency and season goals. This becomes the
-          foundation for player profiles and AI-generated training sessions.
-        </p>
-
-        <div style={{ marginTop: 24, display: "flex", gap: 12, flexWrap: "wrap" }}>
-          <Link
-            href="/teams/new"
-            style={{
-              background: "#0f172a",
-              color: "#fff",
-              padding: "12px 18px",
-              borderRadius: 12,
-              textDecoration: "none",
-              fontWeight: 600,
-            }}
-          >
-            Create team profile
-          </Link>
-
-          <Link
-            href="/drills"
-            style={{
-              background: "#e2e8f0",
-              color: "#0f172a",
-              padding: "12px 18px",
-              borderRadius: 12,
-              textDecoration: "none",
-              fontWeight: 600,
-            }}
-          >
-            Drill library
-          </Link>
-        </div>
-      </section>
-
-      <section
+    <main
+      style={{
+        minHeight: "100vh",
+        background: "#f1f5f9",
+        padding: "60px 24px",
+      }}
+    >
+      <div
         style={{
-          border: "1px solid #e2e8f0",
-          borderRadius: 20,
-          padding: 24,
-          background: "#fff",
-          color: "#0f172a",
+          maxWidth: 1100,
+          margin: "0 auto",
+          display: "grid",
+          gap: 40,
         }}
       >
-        <div
+        <header
           style={{
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            gap: 16,
-            marginBottom: 20,
             flexWrap: "wrap",
+            gap: 20,
           }}
         >
-          <div>
-            <h2 style={{ fontSize: 24, marginBottom: 4 }}>Your teams</h2>
-            <p style={{ color: "#64748b" }}>
-              Open a team to review players and prepare the next training session.
-            </p>
+          <h1 style={{ fontSize: 24 }}>⚽ Football Coach AI</h1>
+
+          <div style={{ display: "flex", gap: 12 }}>
+            <Link href="/login" style={secondaryButton}>
+              Log in
+            </Link>
+
+            <Link href="/teams" style={primaryButton}>
+              Demo
+            </Link>
           </div>
-          <span
+        </header>
+
+        <section style={{ maxWidth: 800 }}>
+          <h2
             style={{
-              padding: "8px 12px",
-              borderRadius: 999,
-              background: "#f8fafc",
-              color: "#334155",
-              fontWeight: 600,
+              fontSize: 52,
+              lineHeight: 1.1,
+              marginBottom: 20,
             }}
           >
-            {teams.length} team{teams.length === 1 ? "" : "s"}
-          </span>
-        </div>
+            Plan better football training sessions
+          </h2>
 
-        {teams.length === 0 ? (
-          <div
+          <p
             style={{
-              border: "1px dashed #cbd5e1",
-              borderRadius: 16,
-              padding: 24,
+              fontSize: 20,
               color: "#475569",
+              lineHeight: 1.7,
             }}
           >
-            No teams yet. Create your first team profile to get started.
-          </div>
-        ) : (
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-              gap: 16,
-            }}
-          >
-            {teams.map((team) => (
-              <Link
-                key={team.id}
-                href={`/teams/${team.id}`}
-                style={{
-                  display: "block",
-                  border: "1px solid #e2e8f0",
-                  borderRadius: 18,
-                  padding: 18,
-                  textDecoration: "none",
-                  color: "inherit",
-                  background: "#f8fafc",
-                }}
-              >
-                <div style={{ marginBottom: 12 }}>
-                  <h3 style={{ fontSize: 20, marginBottom: 6 }}>{team.name}</h3>
-                  <p style={{ color: "#475569" }}>
-                    {team.ageGroup} · {team.competitionLevel}
-                  </p>
-                </div>
+            Create teams, design training sessions, visualize drills and
+            structure your coaching in one modern platform built for football
+            coaches.
+          </p>
 
-                <div style={{ display: "grid", gap: 8, color: "#334155" }}>
-                  <p>
-                    <strong>Formation:</strong>{" "}
-                    {team.primaryFormation || "Not set"}
-                  </p>
-                  <p>
-                    <strong>Training days/week:</strong>{" "}
-                    {team.trainingDaysPerWeek ?? "Not set"}
-                  </p>
-                </div>
-              </Link>
-            ))}
+          <div style={{ marginTop: 28, display: "flex", gap: 14 }}>
+            <Link href="/login" style={primaryButton}>
+              Log in as coach
+            </Link>
+
+            <Link href="/teams" style={secondaryButton}>
+              Try demo
+            </Link>
           </div>
-        )}
-      </section>
+        </section>
+
+        <section
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit,minmax(260px,1fr))",
+            gap: 20,
+          }}
+        >
+          <Feature
+            title="Session Builder"
+            description="Build structured training sessions with blocks and drills."
+          />
+
+          <Feature
+            title="Drill Library"
+            description="Store drills with diagrams, notes and coaching points."
+          />
+
+          <Feature
+            title="Team Profiles"
+            description="Adapt sessions based on age group, level and goals."
+          />
+        </section>
+      </div>
     </main>
   );
 }
+
+function Feature({ title, description }: any) {
+  return (
+    <div
+      style={{
+        border: "1px solid #e2e8f0",
+        borderRadius: 20,
+        padding: 22,
+        background: "#fff",
+      }}
+    >
+      <h3 style={{ marginBottom: 10 }}>{title}</h3>
+      <p style={{ color: "#475569" }}>{description}</p>
+    </div>
+  );
+}
+
+const primaryButton: React.CSSProperties = {
+  padding: "14px 20px",
+  background: "#0f172a",
+  color: "#fff",
+  borderRadius: 12,
+  textDecoration: "none",
+  fontWeight: 600,
+};
+
+const secondaryButton: React.CSSProperties = {
+  padding: "14px 20px",
+  border: "1px solid #cbd5e1",
+  borderRadius: 12,
+  textDecoration: "none",
+  color: "#0f172a",
+  fontWeight: 600,
+};

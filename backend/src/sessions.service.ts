@@ -1,4 +1,5 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
+
+import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
 import { PrismaService } from './prisma.service';
 import { RuleBasedPlannerService } from './rule-based-planner.service';
 import { AiSessionService } from './ai-session.service';
@@ -134,7 +135,7 @@ export class SessionsController {
 
   @Patch(':id')
   async update(@Param('id') id: string, @Body() data: any) {
-    const { title, date, durationMinutes, intensity, mainFocus, mainFocusTags } = data;
+    const { title, date, durationMinutes, intensity } = data;
 
     return this.prisma.trainingSession.update({
       where: { id },
@@ -146,186 +147,7 @@ export class SessionsController {
             ? undefined
             : Number(durationMinutes),
         intensity,
-        mainFocusTags: mainFocusTags ?? mainFocus,
       },
-      include: {
-        blocks: {
-          include: {
-            drills: {
-              include: {
-                drill: true,
-              },
-              orderBy: {
-                order: 'asc',
-              },
-            },
-          },
-          orderBy: {
-            order: 'asc',
-          },
-        },
-      },
-    });
-  }
-
-  @Post(':id/blocks/:blockId/drills')
-  async addDrillToBlock(
-    @Param('id') sessionId: string,
-    @Param('blockId') blockId: string,
-    @Body() body: any,
-  ) {
-    const block = await this.prisma.trainingBlock.findFirst({
-      where: {
-        id: blockId,
-        sessionId,
-      },
-      include: {
-        drills: {
-          orderBy: {
-            order: 'asc',
-          },
-        },
-      },
-    });
-
-    if (!block) {
-      throw new Error('Block not found');
-    }
-
-    const nextOrder = block.drills.length + 1;
-
-    await this.prisma.trainingBlockDrill.create({
-      data: {
-        blockId,
-        drillId: String(body.drillId),
-        order: nextOrder,
-        customNotes: body.customNotes ?? null,
-      },
-    });
-
-    return this.prisma.trainingSession.findUnique({
-      where: { id: sessionId },
-      include: {
-        blocks: {
-          include: {
-            drills: {
-              include: {
-                drill: true,
-              },
-              orderBy: {
-                order: 'asc',
-              },
-            },
-          },
-          orderBy: {
-            order: 'asc',
-          },
-        },
-      },
-    });
-  }
-
-  @Delete(':id/blocks/:blockId/drills/:trainingBlockDrillId')
-  async removeDrillFromBlock(
-    @Param('id') sessionId: string,
-    @Param('blockId') blockId: string,
-    @Param('trainingBlockDrillId') trainingBlockDrillId: string,
-  ) {
-    await this.prisma.trainingBlockDrill.delete({
-      where: {
-        id: trainingBlockDrillId,
-      },
-    });
-
-    const remaining = await this.prisma.trainingBlockDrill.findMany({
-      where: { blockId },
-      orderBy: { order: 'asc' },
-    });
-
-    for (let index = 0; index < remaining.length; index += 1) {
-      await this.prisma.trainingBlockDrill.update({
-        where: { id: remaining[index].id },
-        data: { order: index + 1 },
-      });
-    }
-
-    return this.prisma.trainingSession.findUnique({
-      where: { id: sessionId },
-      include: {
-        blocks: {
-          include: {
-            drills: {
-              include: {
-                drill: true,
-              },
-              orderBy: {
-                order: 'asc',
-              },
-            },
-          },
-          orderBy: {
-            order: 'asc',
-          },
-        },
-      },
-    });
-  }
-
-  @Patch(':id/blocks/:blockId/drills/:trainingBlockDrillId')
-  async updateBlockDrill(
-    @Param('id') sessionId: string,
-    @Param('blockId') blockId: string,
-    @Param('trainingBlockDrillId') trainingBlockDrillId: string,
-    @Body() body: any,
-  ) {
-    const current = await this.prisma.trainingBlockDrill.findUnique({
-      where: { id: trainingBlockDrillId },
-    });
-
-    if (!current) {
-      throw new Error('Training block drill not found');
-    }
-
-    if (body.direction === 'up' || body.direction === 'down') {
-      const drills = await this.prisma.trainingBlockDrill.findMany({
-        where: { blockId },
-        orderBy: { order: 'asc' },
-      });
-
-      const currentIndex = drills.findIndex((item) => item.id === trainingBlockDrillId);
-
-      if (currentIndex !== -1) {
-        const swapIndex =
-          body.direction === 'up' ? currentIndex - 1 : currentIndex + 1;
-
-        if (swapIndex >= 0 && swapIndex < drills.length) {
-          const currentItem = drills[currentIndex];
-          const swapItem = drills[swapIndex];
-
-          await this.prisma.trainingBlockDrill.update({
-            where: { id: currentItem.id },
-            data: { order: swapItem.order },
-          });
-
-          await this.prisma.trainingBlockDrill.update({
-            where: { id: swapItem.id },
-            data: { order: currentItem.order },
-          });
-        }
-      }
-    }
-
-    if (typeof body.customNotes === 'string' || body.customNotes === null) {
-      await this.prisma.trainingBlockDrill.update({
-        where: { id: trainingBlockDrillId },
-        data: {
-          customNotes: body.customNotes,
-        },
-      });
-    }
-
-    return this.prisma.trainingSession.findUnique({
-      where: { id: sessionId },
       include: {
         blocks: {
           include: {
@@ -384,7 +206,6 @@ export class SessionsController {
         date: new Date(),
         durationMinutes: session.durationMinutes,
         intensity: session.intensity,
-        mainFocusTags: session.mainFocusTags,
         blocks: {
           create: session.blocks.map((block) => ({
             type: block.type,

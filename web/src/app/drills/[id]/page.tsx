@@ -59,6 +59,7 @@ export default function DrillDetailPage({
   const [drillId, setDrillId] = useState("");
   const [drill, setDrill] = useState<Drill | null>(null);
   const [layout, setLayout] = useState<DrillLayout | null>(null);
+  const [relatedDrills, setRelatedDrills] = useState<Drill[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
 
@@ -70,16 +71,33 @@ export default function DrillDetailPage({
       setDrillId(resolved.id);
 
       try {
-        const [drillData, layoutData] = await Promise.all([
+        const [drillData, layoutData, allDrills] = await Promise.all([
           apiFetch<Drill>(`/drills/${resolved.id}`),
           loadLayoutSafe(resolved.id),
+          apiFetch<Drill[]>("/drills"),
         ]);
 
         setDrill(drillData);
         setLayout(layoutData);
+
+        const selectedFocusTags = splitTags(drillData.focusTags);
+
+        const related = allDrills
+          .filter((d) => d.id !== resolved.id)
+          .map((d) => ({
+            drill: d,
+            score: getRelatedScore(drillData, d, selectedFocusTags),
+          }))
+          .filter((item) => item.score > 0)
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 4)
+          .map((item) => item.drill);
+
+        setRelatedDrills(related);
       } catch {
         setDrill(null);
         setLayout(null);
+        setRelatedDrills([]);
       } finally {
         setIsLoading(false);
       }
@@ -366,6 +384,72 @@ export default function DrillDetailPage({
             </div>
           )}
         </section>
+
+        {relatedDrills.length > 0 ? (
+          <section className="card" style={{ padding: 28, background: "#ffffff" }}>
+            <div style={{ marginBottom: 18 }}>
+              <h2 style={{ fontSize: 24, margin: 0 }}>Related drills</h2>
+              <p style={{ margin: "8px 0 0", color: "#64748b" }}>
+                Similar drills based on category, focus tags, age and player count.
+              </p>
+            </div>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                gap: 16,
+              }}
+            >
+              {relatedDrills.map((related) => (
+                <div
+                  key={related.id}
+                  style={{
+                    border: "1px solid #e2e8f0",
+                    borderRadius: 18,
+                    padding: 16,
+                    background: "#f8fafc",
+                    display: "grid",
+                    gap: 12,
+                  }}
+                >
+                  <div>
+                    <h3 style={{ margin: "0 0 8px", fontSize: 18 }}>
+                      {related.name}
+                    </h3>
+                    <p style={{ margin: 0, color: "#64748b" }}>
+                      {capitalize(related.category)} • {related.durationMin} min
+                    </p>
+                  </div>
+
+                  {related.focusTags ? (
+                    <p style={{ margin: 0, color: "#334155" }}>
+                      <strong>Focus:</strong> {related.focusTags}
+                    </p>
+                  ) : null}
+
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    <Link
+                      href={`/drills/${related.id}`}
+                      className="secondary-button"
+                      style={{ textDecoration: "none" }}
+                    >
+                      Open drill
+                    </Link>
+
+                    <Link
+                      href={`/drills/builder?drillId=${related.id}`}
+                      className="secondary-button"
+                      style={{ textDecoration: "none" }}
+                    >
+                      Open builder
+                    </Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        ) : null}
       </div>
     </main>
   );
@@ -387,6 +471,60 @@ async function loadLayoutSafe(id: string): Promise<DrillLayout | null> {
   } catch {
     return null;
   }
+}
+
+function splitTags(value?: string | null) {
+  if (!value) return [];
+  return value
+    .split(",")
+    .map((tag) => tag.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+function getRelatedScore(
+  selected: Drill,
+  candidate: Drill,
+  selectedFocusTags: string[],
+) {
+  let score = 0;
+
+  if (candidate.category === selected.category) {
+    score += 5;
+  }
+
+  const candidateTags = splitTags(candidate.focusTags);
+  const sharedTags = candidateTags.filter((tag) =>
+    selectedFocusTags.includes(tag),
+  ).length;
+
+  score += sharedTags * 3;
+
+  const overlapsAge =
+    selected.ageMin != null &&
+    selected.ageMax != null &&
+    candidate.ageMin != null &&
+    candidate.ageMax != null &&
+    candidate.ageMin <= selected.ageMax &&
+    candidate.ageMax >= selected.ageMin;
+
+  if (overlapsAge) {
+    score += 2;
+  }
+
+  const overlapsPlayers =
+    candidate.minPlayers <= selected.maxPlayers &&
+    candidate.maxPlayers >= selected.minPlayers;
+
+  if (overlapsPlayers) {
+    score += 2;
+  }
+
+  const difficultyDiff = Math.abs(candidate.difficulty - selected.difficulty);
+  if (difficultyDiff <= 1) {
+    score += 1;
+  }
+
+  return score;
 }
 
 function Meta({ label, value }: { label: string; value: string }) {

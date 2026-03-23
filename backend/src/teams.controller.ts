@@ -1,33 +1,58 @@
-import { Body, Controller, Get, Param, Patch, Post, Put } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Put,
+  Req,
+  UnauthorizedException,
+  UseGuards,
+} from '@nestjs/common';
 import { PrismaService } from './prisma.service';
 import { CreateTeamDto } from './dto/create-team.dto';
+import { JwtAuthGuard } from './jwt-auth.guard';
 
 @Controller({
   path: 'teams',
   version: '1',
 })
+@UseGuards(JwtAuthGuard)
 export class TeamsController {
   constructor(private readonly prisma: PrismaService) {}
 
   @Get()
-  findAll() {
+  findAll(@Req() req: any) {
     return this.prisma.team.findMany({
+      where: {
+        coachId: req.user.coachId,
+      },
       include: { players: { include: { attributes: true } } },
+      orderBy: {
+        name: 'asc',
+      },
     });
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.prisma.team.findUnique({
-      where: { id },
+  findOne(@Param('id') id: string, @Req() req: any) {
+    return this.prisma.team.findFirst({
+      where: {
+        id,
+        coachId: req.user.coachId,
+      },
       include: { players: { include: { attributes: true } } },
     });
   }
 
   @Get(':id/formation')
-  async getFormation(@Param('id') id: string) {
-    const team = await this.prisma.team.findUnique({
-      where: { id },
+  async getFormation(@Param('id') id: string, @Req() req: any) {
+    const team = await this.prisma.team.findFirst({
+      where: {
+        id,
+        coachId: req.user.coachId,
+      },
       select: {
         id: true,
         primaryFormation: true,
@@ -58,7 +83,25 @@ export class TeamsController {
   }
 
   @Put(':id/formation')
-  async saveFormation(@Param('id') id: string, @Body() body: any) {
+  async saveFormation(
+    @Param('id') id: string,
+    @Req() req: any,
+    @Body() body: any,
+  ) {
+    const existing = await this.prisma.team.findFirst({
+      where: {
+        id,
+        coachId: req.user.coachId,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!existing) {
+      throw new UnauthorizedException('Team not found or access denied.');
+    }
+
     const payload = {
       formation: typeof body?.formation === 'string' ? body.formation : null,
       players: Array.isArray(body?.players) ? body.players : [],
@@ -88,29 +131,7 @@ export class TeamsController {
   }
 
   @Post()
-  async create(@Body() data: CreateTeamDto) {
-    const coachId = data.coachId?.trim();
-
-    if (coachId) {
-      return this.prisma.team.create({
-        data: {
-          ...data,
-          coachId,
-        },
-      });
-    }
-
-    const demoCoach = await this.prisma.coach.upsert({
-      where: { email: 'demo@footballcoach.local' },
-      update: {},
-      create: {
-        email: 'demo@footballcoach.local',
-        password: 'demo-password',
-        name: 'Demo Coach',
-        club: 'Demo Club',
-      },
-    });
-
+  async create(@Body() data: CreateTeamDto, @Req() req: any) {
     return this.prisma.team.create({
       data: {
         name: data.name,
@@ -119,7 +140,7 @@ export class TeamsController {
         primaryFormation: data.primaryFormation,
         trainingDaysPerWeek: data.trainingDaysPerWeek,
         primaryGoals: data.primaryGoals,
-        coachId: demoCoach.id,
+        coachId: req.user.coachId,
       },
     });
   }
@@ -127,6 +148,7 @@ export class TeamsController {
   @Patch(':id')
   async update(
     @Param('id') id: string,
+    @Req() req: any,
     @Body()
     data: {
       name?: string;
@@ -137,6 +159,20 @@ export class TeamsController {
       primaryGoals?: string;
     },
   ) {
+    const existing = await this.prisma.team.findFirst({
+      where: {
+        id,
+        coachId: req.user.coachId,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!existing) {
+      throw new UnauthorizedException('Team not found or access denied.');
+    }
+
     return this.prisma.team.update({
       where: { id },
       data: {

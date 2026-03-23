@@ -32,6 +32,23 @@ type CreatedSession = {
   id: string;
 };
 
+const FOCUS_TAG_OPTIONS = [
+  "passing",
+  "first touch",
+  "dribbling",
+  "finishing",
+  "possession",
+  "defending",
+  "pressing",
+  "transition",
+  "movement",
+  "scanning",
+  "speed",
+  "coordination",
+  "1v1",
+  "small sided games",
+];
+
 export default function NewSessionPage() {
   const params = useParams<{ teamId: string }>();
   const router = useRouter();
@@ -39,6 +56,15 @@ export default function NewSessionPage() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [selectedFocusTags, setSelectedFocusTags] = useState<string[]>([]);
+
+  function toggleFocusTag(tag: string) {
+    setSelectedFocusTags((prev) =>
+      prev.includes(tag)
+        ? prev.filter((item) => item !== tag)
+        : [...prev, tag],
+    );
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -51,7 +77,7 @@ export default function NewSessionPage() {
     const date = String(formData.get("date") || "");
     const durationMinutes = Number(formData.get("durationMinutes") || 75);
     const intensityText = String(formData.get("intensity") || "medium");
-    const mainFocusTags = String(formData.get("mainFocusTags") || "").trim();
+    const mainFocusTags = selectedFocusTags.join(", ");
 
     const intensityMap: Record<string, number> = {
       low: 1,
@@ -165,17 +191,66 @@ export default function NewSessionPage() {
             </div>
           </div>
 
-          <div style={{ display: "grid", gap: 8 }}>
-            <label htmlFor="mainFocusTags" style={{ fontWeight: 600 }}>
-              Main focus tags
-            </label>
-            <input
-              id="mainFocusTags"
-              name="mainFocusTags"
-              placeholder="Example: passing, first touch, possession"
-            />
+          <div style={{ display: "grid", gap: 12 }}>
+            <label style={{ fontWeight: 600 }}>Main focus tags</label>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+                gap: 12,
+              }}
+            >
+              {FOCUS_TAG_OPTIONS.map((tag) => {
+                const isSelected = selectedFocusTags.includes(tag);
+
+                return (
+                  <label
+                    key={tag}
+                    style={{
+                      display: "grid",
+                      justifyItems: "center",
+                      alignContent: "center",
+                      gap: 10,
+                      minHeight: 92,
+                      padding: "14px 12px",
+                      borderRadius: 14,
+                      border: isSelected
+                        ? "2px solid #1d4ed8"
+                        : "1px solid #e2e8f0",
+                      background: isSelected ? "#eff6ff" : "#f8fafc",
+                      cursor: "pointer",
+                      textAlign: "center",
+                      boxSizing: "border-box",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => toggleFocusTag(tag)}
+                      style={{
+                        margin: 0,
+                        width: 16,
+                        height: 16,
+                      }}
+                    />
+                    <span
+                      style={{
+                        lineHeight: 1.2,
+                        fontWeight: isSelected ? 700 : 500,
+                        color: "#0f172a",
+                        wordBreak: "break-word",
+                      }}
+                    >
+                      {capitalizeWords(tag)}
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+
             <p style={{ color: "#64748b", margin: 0 }}>
-              Separate focus areas with commas.
+              Select one or more focus areas for the generated session.
             </p>
           </div>
 
@@ -209,4 +284,11 @@ export default function NewSessionPage() {
       </section>
     </main>
   );
+}
+
+function capitalizeWords(value: string) {
+  return value
+    .split(" ")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
 }
