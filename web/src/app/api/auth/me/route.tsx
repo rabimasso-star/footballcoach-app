@@ -1,9 +1,9 @@
-import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
+import { cookies } from 'next/headers';
+import { NextResponse } from 'next/server';
 
 export async function GET() {
-  const cookieStore = cookies();
-  const token = cookieStore.get("auth_token");
+  const cookieStore = await cookies();
+  const token = cookieStore.get('auth_token');
 
   if (!token) {
     return NextResponse.json({ authenticated: false }, { status: 401 });
@@ -11,5 +11,6 @@ export async function GET() {
 
   return NextResponse.json({
     authenticated: true,
+    token: token.value,
   });
 }
