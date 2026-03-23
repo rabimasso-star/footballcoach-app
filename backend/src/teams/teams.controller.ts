@@ -10,9 +10,9 @@ import {
   UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
-import { PrismaService } from './prisma.service';
-import { CreateTeamDto } from './dto/create-team.dto';
-import { JwtAuthGuard } from './jwt-auth.guard';
+import { PrismaService } from '../prisma/prisma.service';
+import { CreateTeamDto } from '../dto/create-team.dto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller({
   path: 'teams',

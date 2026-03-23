@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
-import { PrismaService } from './prisma.service';
-import { RuleBasedPlannerService } from './rule-based-planner.service';
-import { AiSessionService } from './ai-session.service';
+import { PrismaService } from '../prisma/prisma.service';
+import { RuleBasedPlannerService } from '../planner/rule-based-planner.service';
+import { AiSessionService } from '../planner/ai-session.service';
 
 @Controller({
   path: 'sessions',

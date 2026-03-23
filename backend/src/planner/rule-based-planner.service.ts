@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from './prisma.service';
-import { TeamAnalyzerService } from './team-analyzer.service';
-import { SessionHistoryService } from './session-history.service';
+import { PrismaService } from '../prisma/prisma.service';
+import { TeamAnalyzerService } from '../teams/team-analyzer.service';
+import { SessionHistoryService } from '../sessions/session-history.service';
 
 export type AutoPlanInput = {
   teamId: string;

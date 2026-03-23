@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from './prisma.service';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class SessionHistoryService {
@@ -23,6 +23,6 @@ export class SessionHistoryService {
           .filter(Boolean),
       );
 
-    return [...new Set(focuses)];
+    return [...new Set(focuses)] as string[];
   }
 }
