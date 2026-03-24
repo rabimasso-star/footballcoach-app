@@ -9,6 +9,15 @@ type Props = {
   blockId: string;
 };
 
+type RegenerateResponse = {
+  id?: string;
+  block?: {
+    id?: string;
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+};
+
 export default function RegenerateBlockButton({
   sessionId,
   blockId,
@@ -22,12 +31,29 @@ export default function RegenerateBlockButton({
       setIsRegenerating(true);
       setErrorMessage("");
 
-      await apiFetch(`/sessions/${sessionId}/blocks/${blockId}/regenerate`, {
-        method: "POST",
+      const result = (await apiFetch(
+        `/sessions/${sessionId}/blocks/${blockId}/regenerate`,
+        {
+          method: "POST",
+        },
+      )) as RegenerateResponse;
+
+      console.log("Regenerate block success", {
+        sessionId,
+        requestedBlockId: blockId,
+        response: result,
+        returnedId: result?.id,
+        returnedBlockId: result?.block?.id,
       });
 
       router.refresh();
     } catch (error) {
+      console.error("Regenerate block failed", {
+        sessionId,
+        blockId,
+        error,
+      });
+
       setErrorMessage(
         error instanceof Error ? error.message : "Could not regenerate block.",
       );

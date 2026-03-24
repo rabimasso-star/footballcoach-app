@@ -151,9 +151,11 @@ export class AiSessionService {
     if (averages.positioning <= 5) weaknesses.push('positioning');
     if (averages.confidence <= 5) weaknesses.push('confidence');
 
+    const currentDrillId = block.drills[0]?.drillId ?? null;
+
     const existingDrillIds = session.blocks
       .flatMap((item) => item.drills.map((drill) => drill.drillId))
-      .filter((drillId) => drillId !== block.drills[0]?.drillId);
+      .filter((drillId) => drillId !== currentDrillId);
 
     const focusTags = String(
       block.focusTags || session.mainFocusTags || '',
@@ -192,7 +194,7 @@ export class AiSessionService {
       .sort((a, b) => b.score - a.score);
 
     const replacementDrill =
-      scoredDrills[0]?.drill ??
+      scoredDrills.find((item) => item.drill.id !== currentDrillId)?.drill ??
       block.drills[0]?.drill ??
       null;
 
