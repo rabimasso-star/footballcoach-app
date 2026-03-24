@@ -32,22 +32,7 @@ export class AiSessionService {
 
     const players = team.players ?? [];
     const averages = this.calculateAverageAttributes(players);
-
-    const strengths: string[] = [];
-    const weaknesses: string[] = [];
-
-    if (averages.passing >= 7) strengths.push('passing');
-    if (averages.firstTouch >= 7) strengths.push('first touch');
-    if (averages.dribbling >= 7) strengths.push('dribbling');
-    if (averages.decisionMaking >= 7) strengths.push('decision making');
-    if (averages.positioning >= 7) strengths.push('positioning');
-
-    if (averages.passing <= 5) weaknesses.push('passing');
-    if (averages.firstTouch <= 5) weaknesses.push('first touch');
-    if (averages.dribbling <= 5) weaknesses.push('dribbling');
-    if (averages.decisionMaking <= 5) weaknesses.push('decision making');
-    if (averages.positioning <= 5) weaknesses.push('positioning');
-    if (averages.confidence <= 5) weaknesses.push('confidence');
+    const { strengths, weaknesses } = this.getStrengthsAndWeaknesses(averages);
 
     const refinedBlocks = input.sessionDraft.blocks.map((block) => {
       const extraNotes = this.buildBlockNotes(block.type, strengths, weaknesses);
@@ -134,22 +119,7 @@ export class AiSessionService {
 
     const players = session.team.players ?? [];
     const averages = this.calculateAverageAttributes(players);
-
-    const strengths: string[] = [];
-    const weaknesses: string[] = [];
-
-    if (averages.passing >= 7) strengths.push('passing');
-    if (averages.firstTouch >= 7) strengths.push('first touch');
-    if (averages.dribbling >= 7) strengths.push('dribbling');
-    if (averages.decisionMaking >= 7) strengths.push('decision making');
-    if (averages.positioning >= 7) strengths.push('positioning');
-
-    if (averages.passing <= 5) weaknesses.push('passing');
-    if (averages.firstTouch <= 5) weaknesses.push('first touch');
-    if (averages.dribbling <= 5) weaknesses.push('dribbling');
-    if (averages.decisionMaking <= 5) weaknesses.push('decision making');
-    if (averages.positioning <= 5) weaknesses.push('positioning');
-    if (averages.confidence <= 5) weaknesses.push('confidence');
+    const { strengths, weaknesses } = this.getStrengthsAndWeaknesses(averages);
 
     const currentDrillId = block.drills[0]?.drillId ?? null;
 
@@ -157,9 +127,7 @@ export class AiSessionService {
       .flatMap((item) => item.drills.map((drill) => drill.drillId))
       .filter((drillId) => drillId !== currentDrillId);
 
-    const focusTags = String(
-      block.focusTags || session.mainFocusTags || '',
-    )
+    const focusTags = String(block.focusTags || session.mainFocusTags || '')
       .toLowerCase()
       .split(',')
       .map((tag) => tag.trim())
@@ -247,6 +215,122 @@ export class AiSessionService {
     });
 
     return updatedBlock;
+  }
+
+  async getRelatedDrills(params: {
+    sessionId: string;
+    blockId: string;
+  }) {
+    const session = await this.prisma.trainingSession.findUnique({
+      where: { id: params.sessionId },
+      include: {
+        team: true,
+        blocks: {
+          include: {
+            drills: {
+              include: {
+                drill: true,
+              },
+              orderBy: {
+                order: 'asc',
+              },
+            },
+          },
+          orderBy: {
+            order: 'asc',
+          },
+        },
+      },
+    });
+
+    if (!session) {
+      throw new Error('Session not found');
+    }
+
+    const block = session.blocks.find((item) => item.id === params.blockId);
+
+    if (!block) {
+      throw new Error('Block not found');
+    }
+
+    const currentDrillId = block.drills[0]?.drillId ?? null;
+
+    const focusTags = String(block.focusTags || session.mainFocusTags || '')
+      .toLowerCase()
+      .split(',')
+      .map((tag) => tag.trim())
+      .filter(Boolean);
+
+    const categoryCandidates = this.getDrillCategoriesForBlockType(block.type);
+    const teamAge = this.extractAge(session.team.ageGroup);
+
+    const availableDrills = await this.prisma.drill.findMany({
+      where: {
+        category: {
+          in: categoryCandidates,
+        },
+        difficulty: {
+          lte: 5,
+        },
+        intensity: {
+          lte: session.intensity,
+        },
+      },
+      orderBy: [{ difficulty: 'asc' }, { durationMin: 'asc' }],
+    });
+
+    const relatedDrills = availableDrills
+      .filter((drill) => this.matchesAge(drill, teamAge))
+      .filter((drill) => drill.id !== currentDrillId)
+      .map((drill) => ({
+        ...drill,
+        relatedScore: this.scoreDrillForRegeneration(
+          drill,
+          block.type,
+          focusTags,
+        ),
+      }))
+      .sort((a, b) => b.relatedScore - a.relatedScore)
+      .slice(0, 6);
+
+    return {
+      blockId: block.id,
+      currentDrillId,
+      drills: relatedDrills,
+    };
+  }
+
+  private getStrengthsAndWeaknesses(averages: {
+    speed: number;
+    endurance: number;
+    strength: number;
+    dribbling: number;
+    passing: number;
+    shooting: number;
+    firstTouch: number;
+    tackling: number;
+    positioning: number;
+    decisionMaking: number;
+    confidence: number;
+    attitude: number;
+  }) {
+    const strengths: string[] = [];
+    const weaknesses: string[] = [];
+
+    if (averages.passing >= 7) strengths.push('passing');
+    if (averages.firstTouch >= 7) strengths.push('first touch');
+    if (averages.dribbling >= 7) strengths.push('dribbling');
+    if (averages.decisionMaking >= 7) strengths.push('decision making');
+    if (averages.positioning >= 7) strengths.push('positioning');
+
+    if (averages.passing <= 5) weaknesses.push('passing');
+    if (averages.firstTouch <= 5) weaknesses.push('first touch');
+    if (averages.dribbling <= 5) weaknesses.push('dribbling');
+    if (averages.decisionMaking <= 5) weaknesses.push('decision making');
+    if (averages.positioning <= 5) weaknesses.push('positioning');
+    if (averages.confidence <= 5) weaknesses.push('confidence');
+
+    return { strengths, weaknesses };
   }
 
   private calculateAverageAttributes(players: any[]) {

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { API_BASE_URL } from "@/lib/api";
 import RegenerateBlockButton from "@/components/regenerate-block-button";
+import RelatedDrillsButton from "@/components/related-drills-button";
 
 type Drill = {
   id: string;
@@ -280,7 +281,7 @@ export default async function SessionDetailPage({
                     display: "flex",
                     gap: 10,
                     flexWrap: "wrap",
-                    alignItems: "center",
+                    alignItems: "flex-start",
                   }}
                 >
                   <div
@@ -296,6 +297,11 @@ export default async function SessionDetailPage({
                   </div>
 
                   <RegenerateBlockButton
+                    sessionId={session.id}
+                    blockId={block.id}
+                  />
+
+                  <RelatedDrillsButton
                     sessionId={session.id}
                     blockId={block.id}
                   />

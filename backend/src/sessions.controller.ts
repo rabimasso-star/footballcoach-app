@@ -337,4 +337,15 @@ export class SessionsController {
       block,
     };
   }
+
+  @Get(':sessionId/blocks/:blockId/related-drills')
+  async getRelatedDrills(
+    @Param('sessionId') sessionId: string,
+    @Param('blockId') blockId: string,
+  ) {
+    return this.ai.getRelatedDrills({
+      sessionId,
+      blockId,
+    });
+  }
 }
