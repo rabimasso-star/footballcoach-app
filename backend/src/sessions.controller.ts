@@ -91,7 +91,7 @@ export class SessionsController {
         ...sessionData,
         coachId: finalCoachId,
         date: date ? new Date(date) : new Date(),
-        blocks: blocks?.length
+        blocks: Array.isArray(blocks) && blocks.length > 0
           ? {
               create: blocks.map((block: any) => ({
                 type: block.type,
@@ -99,7 +99,7 @@ export class SessionsController {
                 durationMinutes: block.durationMinutes,
                 focusTags: block.focusTags,
                 description: block.description,
-                drills: block.drills?.length
+                drills: Array.isArray(block.drills) && block.drills.length > 0
                   ? {
                       create: block.drills.map((drill: any) => ({
                         drillId: drill.drillId,
@@ -141,6 +141,78 @@ export class SessionsController {
       sessionDraft: draft,
     });
 
-    return refined.draft;
+    const finalDraft = refined?.draft ?? draft;
+
+    let finalCoachId = String(finalDraft.coachId || data.coachId || '').trim();
+
+    if (!finalCoachId) {
+      const demoCoach = await this.prisma.coach.upsert({
+        where: { email: 'demo@footballcoach.local' },
+        update: {},
+        create: {
+          email: 'demo@footballcoach.local',
+          password: 'demo-password',
+          name: 'Demo Coach',
+          club: 'Demo Club',
+        },
+      });
+
+      finalCoachId = demoCoach.id;
+    }
+
+    const createdSession = await this.prisma.trainingSession.create({
+      data: {
+        title: finalDraft.title,
+        teamId: finalDraft.teamId,
+        coachId: finalCoachId,
+        date: finalDraft.date ? new Date(finalDraft.date) : new Date(),
+        durationMinutes: Number(finalDraft.durationMinutes || 75),
+        intensity: Number(finalDraft.intensity || 2),
+        mainFocusTags: finalDraft.mainFocusTags,
+        createdBy: finalDraft.createdBy ?? 'rule_engine',
+        blocks: Array.isArray(finalDraft.blocks) && finalDraft.blocks.length > 0
+          ? {
+              create: finalDraft.blocks.map((block: any) => ({
+                type: block.type,
+                order: Number(block.order || 1),
+                durationMinutes: Number(block.durationMinutes || 10),
+                focusTags: block.focusTags,
+                description: block.description,
+                drills: Array.isArray(block.drills) && block.drills.length > 0
+                  ? {
+                      create: block.drills.map((drill: any, index: number) => ({
+                        drillId: drill.drillId,
+                        order: Number(drill.order || index + 1),
+                        customNotes: drill.customNotes,
+                      })),
+                    }
+                  : undefined,
+              })),
+            }
+          : undefined,
+      },
+      include: {
+        blocks: {
+          include: {
+            drills: {
+              include: {
+                drill: true,
+              },
+              orderBy: {
+                order: 'asc',
+              },
+            },
+          },
+          orderBy: {
+            order: 'asc',
+          },
+        },
+      },
+    });
+
+    return {
+      id: createdSession.id,
+      session: createdSession,
+    };
   }
 }

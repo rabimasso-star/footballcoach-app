@@ -1,4 +1,13 @@
-import { Body, Controller, Get, Param, Patch, Post, Put } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  NotFoundException,
+  Param,
+  Patch,
+  Post,
+  Put,
+} from '@nestjs/common';
 import { PrismaService } from './prisma.service';
 import { CreateTeamDto } from './dto/create-team.dto';
 
@@ -12,16 +21,40 @@ export class TeamsController {
   @Get()
   findAll() {
     return this.prisma.team.findMany({
-      include: { players: { include: { attributes: true } } },
+      include: {
+        players: {
+          include: {
+            attributes: true,
+          },
+        },
+      },
+      orderBy: {
+        name: 'asc',
+      },
     });
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.prisma.team.findUnique({
+  async findOne(@Param('id') id: string) {
+    const team = await this.prisma.team.findUnique({
       where: { id },
-      include: { players: { include: { attributes: true } } },
+      include: {
+        players: {
+          include: {
+            attributes: true,
+          },
+          orderBy: {
+            name: 'asc',
+          },
+        },
+      },
     });
+
+    if (!team) {
+      throw new NotFoundException('Team not found');
+    }
+
+    return team;
   }
 
   @Get(':id/formation')
@@ -46,7 +79,7 @@ export class TeamsController {
     });
 
     if (!team) {
-      return null;
+      throw new NotFoundException('Team not found');
     }
 
     return {
@@ -59,9 +92,25 @@ export class TeamsController {
 
   @Put(':id/formation')
   async saveFormation(@Param('id') id: string, @Body() body: any) {
+    const existingTeam = await this.prisma.team.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+
+    if (!existingTeam) {
+      throw new NotFoundException('Team not found');
+    }
+
+    const formation =
+      typeof body?.formation === 'string' && body.formation.trim().length > 0
+        ? body.formation.trim()
+        : null;
+
+    const players = Array.isArray(body?.players) ? body.players : [];
+
     const payload = {
-      formation: typeof body?.formation === 'string' ? body.formation : null,
-      players: Array.isArray(body?.players) ? body.players : [],
+      formation,
+      players,
       updatedAt: new Date().toISOString(),
     };
 
@@ -69,9 +118,7 @@ export class TeamsController {
       where: { id },
       data: {
         formationLayout: payload,
-        ...(typeof body?.formation === 'string'
-          ? { primaryFormation: body.formation }
-          : {}),
+        ...(formation ? { primaryFormation: formation } : {}),
       },
       select: {
         id: true,
@@ -91,11 +138,22 @@ export class TeamsController {
   async create(@Body() data: CreateTeamDto) {
     const coachId = data.coachId?.trim();
 
+    const normalizedName = data.name?.trim();
+    const normalizedAgeGroup = data.ageGroup?.trim();
+    const normalizedCompetitionLevel = data.competitionLevel?.trim();
+    const normalizedPrimaryFormation = data.primaryFormation?.trim() || null;
+    const normalizedPrimaryGoals = data.primaryGoals?.trim() || null;
+
     if (coachId) {
       return this.prisma.team.create({
         data: {
-          ...data,
           coachId,
+          name: normalizedName,
+          ageGroup: normalizedAgeGroup,
+          competitionLevel: normalizedCompetitionLevel,
+          primaryFormation: normalizedPrimaryFormation,
+          trainingDaysPerWeek: data.trainingDaysPerWeek,
+          primaryGoals: normalizedPrimaryGoals,
         },
       });
     }
@@ -113,13 +171,13 @@ export class TeamsController {
 
     return this.prisma.team.create({
       data: {
-        name: data.name,
-        ageGroup: data.ageGroup,
-        competitionLevel: data.competitionLevel,
-        primaryFormation: data.primaryFormation,
-        trainingDaysPerWeek: data.trainingDaysPerWeek,
-        primaryGoals: data.primaryGoals,
         coachId: demoCoach.id,
+        name: normalizedName,
+        ageGroup: normalizedAgeGroup,
+        competitionLevel: normalizedCompetitionLevel,
+        primaryFormation: normalizedPrimaryFormation,
+        trainingDaysPerWeek: data.trainingDaysPerWeek,
+        primaryGoals: normalizedPrimaryGoals,
       },
     });
   }
@@ -137,15 +195,24 @@ export class TeamsController {
       primaryGoals?: string;
     },
   ) {
+    const existingTeam = await this.prisma.team.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+
+    if (!existingTeam) {
+      throw new NotFoundException('Team not found');
+    }
+
     return this.prisma.team.update({
       where: { id },
       data: {
-        name: data.name,
-        ageGroup: data.ageGroup,
-        competitionLevel: data.competitionLevel,
-        primaryFormation: data.primaryFormation,
+        name: data.name?.trim(),
+        ageGroup: data.ageGroup?.trim(),
+        competitionLevel: data.competitionLevel?.trim(),
+        primaryFormation: data.primaryFormation?.trim(),
         trainingDaysPerWeek: data.trainingDaysPerWeek,
-        primaryGoals: data.primaryGoals,
+        primaryGoals: data.primaryGoals?.trim(),
       },
     });
   }

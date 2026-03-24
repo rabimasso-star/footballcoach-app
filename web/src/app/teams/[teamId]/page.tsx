@@ -39,15 +39,20 @@ type Team = {
 };
 
 async function fetchTeam(teamId: string): Promise<Team | null> {
-  const response = await fetch(`${API_BASE_URL}/teams/${teamId}`, {
-    cache: "no-store",
-  });
+  try {
+    const response = await fetch(`${API_BASE_URL}/teams/${teamId}`, {
+      cache: "no-store",
+    });
 
-  if (!response.ok) {
+    if (!response.ok) {
+      return null;
+    }
+
+    const data = (await response.json()) as Team;
+    return data;
+  } catch {
     return null;
   }
-
-  return response.json();
 }
 
 export default async function TeamDetailPage({
@@ -61,15 +66,34 @@ export default async function TeamDetailPage({
   if (!team) {
     return (
       <main className="page-shell">
-        <Link href="/" style={{ color: "#334155", textDecoration: "none" }}>
-          ← Back to dashboard
-        </Link>
-        <h1 className="section-title" style={{ marginTop: 24 }}>
-          Team not found
-        </h1>
-        <p className="section-subtitle">
-          Check that the backend is running and the team exists in the database.
-        </p>
+        <div style={{ marginBottom: 20 }}>
+          <Link href="/" style={{ color: "#334155", textDecoration: "none" }}>
+            ← Back to dashboard
+          </Link>
+        </div>
+
+        <section className="card" style={{ padding: 28 }}>
+          <p className="badge badge-green" style={{ marginBottom: 12 }}>
+            Team profile
+          </p>
+
+          <h1 className="section-title">Team not found</h1>
+
+          <p className="section-subtitle" style={{ marginBottom: 20 }}>
+            Check that the backend is running and that the team exists in the
+            database.
+          </p>
+
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+            <Link href="/teams/new" className="primary-button">
+              Create new team
+            </Link>
+
+            <Link href="/" className="secondary-button">
+              Back to dashboard
+            </Link>
+          </div>
+        </section>
       </main>
     );
   }
@@ -96,7 +120,9 @@ export default async function TeamDetailPage({
             <p className="badge badge-green" style={{ marginBottom: 12 }}>
               Team profile
             </p>
+
             <h1 className="section-title">{team.name}</h1>
+
             <p className="section-subtitle">
               {team.ageGroup} · {team.competitionLevel}
             </p>
@@ -139,7 +165,11 @@ export default async function TeamDetailPage({
             gap: 16,
           }}
         >
-          <InfoCard label="Formation" value={team.primaryFormation || "Not set"} />
+          <InfoCard
+            label="Formation"
+            value={team.primaryFormation || "Not set"}
+          />
+
           <InfoCard
             label="Training days/week"
             value={
@@ -148,6 +178,7 @@ export default async function TeamDetailPage({
                 : "Not set"
             }
           />
+
           <InfoCard label="Players" value={String(team.players.length)} />
         </div>
 
@@ -160,7 +191,7 @@ export default async function TeamDetailPage({
           }}
         >
           <h2 style={{ fontSize: 20, marginBottom: 10 }}>Primary goals</h2>
-          <p style={{ color: "#334155", lineHeight: 1.6 }}>
+          <p style={{ color: "#334155", lineHeight: 1.6, margin: 0 }}>
             {team.primaryGoals || "No season goals have been added yet."}
           </p>
         </div>
@@ -179,7 +210,7 @@ export default async function TeamDetailPage({
         >
           <div>
             <h2 style={{ fontSize: 26, marginBottom: 6 }}>Players</h2>
-            <p style={{ color: "#64748b" }}>
+            <p style={{ color: "#64748b", margin: 0 }}>
               Player attributes are used later when generating training sessions.
             </p>
           </div>
@@ -206,8 +237,8 @@ export default async function TeamDetailPage({
               color: "#475569",
             }}
           >
-            No players yet. Use the Add player button to create your first player
-            profile.
+            No players yet. Use the Add player button to create your first
+            player profile.
           </div>
         ) : (
           <div style={{ display: "grid", gap: 16 }}>
@@ -231,8 +262,11 @@ export default async function TeamDetailPage({
                   }}
                 >
                   <div>
-                    <h3 style={{ fontSize: 20, marginBottom: 6 }}>{player.name}</h3>
-                    <p style={{ color: "#475569" }}>
+                    <h3 style={{ fontSize: 20, marginBottom: 6 }}>
+                      {player.name}
+                    </h3>
+
+                    <p style={{ color: "#475569", margin: 0 }}>
                       {player.positions || "No positions set"} ·{" "}
                       {player.dominantFoot || "Foot not set"}
                     </p>
@@ -249,29 +283,40 @@ export default async function TeamDetailPage({
                 </div>
 
                 {player.notes ? (
-                  <p style={{ color: "#334155", marginBottom: 12 }}>{player.notes}</p>
+                  <p style={{ color: "#334155", marginBottom: 12 }}>
+                    {player.notes}
+                  </p>
                 ) : null}
 
                 {player.attributes ? (
                   <div
                     style={{
                       display: "grid",
-                      gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+                      gridTemplateColumns:
+                        "repeat(auto-fit, minmax(140px, 1fr))",
                       gap: 10,
                     }}
                   >
                     {renderAttribute("Speed", player.attributes.speed)}
                     {renderAttribute("Passing", player.attributes.passing)}
                     {renderAttribute("Dribbling", player.attributes.dribbling)}
-                    {renderAttribute("First touch", player.attributes.firstTouch)}
+                    {renderAttribute(
+                      "First touch",
+                      player.attributes.firstTouch,
+                    )}
                     {renderAttribute(
                       "Decision making",
                       player.attributes.decisionMaking,
                     )}
-                    {renderAttribute("Confidence", player.attributes.confidence)}
+                    {renderAttribute(
+                      "Confidence",
+                      player.attributes.confidence,
+                    )}
                   </div>
                 ) : (
-                  <p style={{ color: "#64748b" }}>No player attributes added yet.</p>
+                  <p style={{ color: "#64748b", margin: 0 }}>
+                    No player attributes added yet.
+                  </p>
                 )}
               </article>
             ))}
@@ -293,7 +338,7 @@ function InfoCard({ label, value }: { label: string; value: string }) {
       }}
     >
       <p style={{ color: "#64748b", marginBottom: 8 }}>{label}</p>
-      <p style={{ fontSize: 22, fontWeight: 700 }}>{value}</p>
+      <p style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>{value}</p>
     </div>
   );
 }
@@ -310,7 +355,7 @@ function renderAttribute(label: string, value: number) {
       }}
     >
       <p style={{ color: "#64748b", marginBottom: 6 }}>{label}</p>
-      <p style={{ fontSize: 18, fontWeight: 700 }}>{value}/10</p>
+      <p style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>{value}/10</p>
     </div>
   );
 }

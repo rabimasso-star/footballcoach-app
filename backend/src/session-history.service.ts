@@ -20,9 +20,9 @@ export class SessionHistoryService {
         value
           .split(',')
           .map((tag) => tag.trim().toLowerCase())
-          .filter(Boolean),
+          .filter((tag): tag is string => tag.length > 0),
       );
 
-    return [...new Set(focuses)];
+    return Array.from(new Set<string>(focuses));
   }
 }

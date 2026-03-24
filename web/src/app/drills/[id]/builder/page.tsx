@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useParams } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 
 type BoardItemType = "player" | "cone" | "ball";
@@ -35,8 +35,8 @@ const FIELD_WIDTH = 900;
 const FIELD_HEIGHT = 560;
 
 export default function DrillBuilderPage() {
-  const searchParams = useSearchParams();
-  const drillId = searchParams.get("drillId");
+  const params = useParams<{ id: string }>();
+  const drillId = params?.id ?? "";
 
   const [selectedTool, setSelectedTool] = useState<DrawingTool>("player");
   const [items, setItems] = useState<BoardItem[]>([]);
@@ -203,7 +203,7 @@ export default function DrillBuilderPage() {
 
   async function saveLayout() {
     if (!drillId) {
-      setSaveMessage("No drill selected. Open builder from a drill first.");
+      setSaveMessage("No drill selected.");
       return;
     }
 
@@ -221,7 +221,7 @@ export default function DrillBuilderPage() {
         body: JSON.stringify(payload),
       });
 
-      setSaveMessage("Layout saved to database.");
+      setSaveMessage("Layout saved to drill.");
     } catch {
       setSaveMessage("Could not save layout.");
     } finally {
@@ -231,7 +231,7 @@ export default function DrillBuilderPage() {
 
   async function loadLayout() {
     if (!drillId) {
-      setSaveMessage("No drill selected. Open builder from a drill first.");
+      setSaveMessage("No drill selected.");
       return;
     }
 
@@ -261,7 +261,7 @@ export default function DrillBuilderPage() {
 
   async function deleteSavedLayout() {
     if (!drillId) {
-      setSaveMessage("No drill selected. Open builder from a drill first.");
+      setSaveMessage("No drill selected.");
       return;
     }
 
@@ -405,7 +405,6 @@ export default function DrillBuilderPage() {
                 setPendingLineStart(null);
               }}
             />
-
             <button
               type="button"
               className="secondary-button"
@@ -606,7 +605,7 @@ export default function DrillBuilderPage() {
               <p style={{ margin: 0, color: "#475569" }}>
                 {drillId
                   ? "This board is linked to a specific drill."
-                  : "Open the builder from a specific drill to save a linked layout."}
+                  : "No drill selected."}
               </p>
 
               <div style={{ display: "grid", gap: 8 }}>
@@ -614,7 +613,7 @@ export default function DrillBuilderPage() {
                   type="button"
                   className="primary-button"
                   onClick={saveLayout}
-                  disabled={isSaving}
+                  disabled={isSaving || !drillId}
                 >
                   {isSaving ? "Saving..." : "Save layout to drill"}
                 </button>
@@ -623,7 +622,7 @@ export default function DrillBuilderPage() {
                   type="button"
                   className="secondary-button"
                   onClick={loadLayout}
-                  disabled={isLoadingLayout}
+                  disabled={isLoadingLayout || !drillId}
                 >
                   {isLoadingLayout ? "Loading..." : "Load saved layout"}
                 </button>
@@ -632,7 +631,7 @@ export default function DrillBuilderPage() {
                   type="button"
                   className="secondary-button"
                   onClick={deleteSavedLayout}
-                  disabled={isSaving}
+                  disabled={isSaving || !drillId}
                 >
                   Delete saved layout
                 </button>
@@ -782,7 +781,6 @@ function PitchLines() {
           borderRadius: 16,
         }}
       />
-
       <div
         style={{
           position: "absolute",
@@ -794,7 +792,6 @@ function PitchLines() {
           transform: "translateX(-50%)",
         }}
       />
-
       <div
         style={{
           position: "absolute",
@@ -807,7 +804,6 @@ function PitchLines() {
           transform: "translate(-50%, -50%)",
         }}
       />
-
       <div
         style={{
           position: "absolute",
@@ -820,7 +816,6 @@ function PitchLines() {
           transform: "translateY(-50%)",
         }}
       />
-
       <div
         style={{
           position: "absolute",
@@ -870,7 +865,9 @@ function renderBoardItem(item: BoardItem, isSelected: boolean) {
           borderLeft: "14px solid transparent",
           borderRight: "14px solid transparent",
           borderBottom: isSelected ? "30px solid #f97316" : "30px solid #fb923c",
-          filter: isSelected ? "drop-shadow(0 0 0.5rem rgba(249,115,22,0.55))" : "none",
+          filter: isSelected
+            ? "drop-shadow(0 0 0.5rem rgba(249,115,22,0.55))"
+            : "none",
         }}
       />
     );

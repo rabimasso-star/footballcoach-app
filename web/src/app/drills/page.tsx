@@ -25,6 +25,7 @@ type Drill = {
 export default function DrillsPage() {
   const [drills, setDrills] = useState<Drill[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
@@ -37,6 +38,12 @@ export default function DrillsPage() {
       try {
         const data = await apiFetch<Drill[]>("/drills");
         setDrills(data);
+      } catch (error) {
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : "Could not load drills.",
+        );
       } finally {
         setIsLoading(false);
       }
@@ -81,6 +88,14 @@ export default function DrillsPage() {
     });
   }, [drills, search, category, difficulty, intensity, age]);
 
+  function clearFilters() {
+    setSearch("");
+    setCategory("");
+    setDifficulty("");
+    setIntensity("");
+    setAge("");
+  }
+
   return (
     <main className="page-shell">
       <div style={{ marginBottom: 20 }}>
@@ -110,14 +125,6 @@ export default function DrillsPage() {
           </div>
 
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-            <Link
-              href="/drills/builder"
-              className="secondary-button"
-              style={{ textDecoration: "none" }}
-            >
-              Open drill builder
-            </Link>
-
             <Link
               href="/drills/new"
               className="primary-button"
@@ -217,13 +224,7 @@ export default function DrillsPage() {
           <button
             type="button"
             className="secondary-button"
-            onClick={() => {
-              setSearch("");
-              setCategory("");
-              setDifficulty("");
-              setIntensity("");
-              setAge("");
-            }}
+            onClick={clearFilters}
           >
             Clear filters
           </button>
@@ -258,6 +259,18 @@ export default function DrillsPage() {
 
         {isLoading ? (
           <p style={{ color: "#64748b" }}>Loading drills...</p>
+        ) : errorMessage ? (
+          <div
+            style={{
+              borderRadius: 14,
+              background: "#fef2f2",
+              color: "#991b1b",
+              padding: "12px 14px",
+              border: "1px solid #fecaca",
+            }}
+          >
+            {errorMessage}
+          </div>
         ) : filteredDrills.length === 0 ? (
           <p style={{ color: "#64748b" }}>No drills match your filters.</p>
         ) : (
@@ -300,7 +313,7 @@ export default function DrillsPage() {
                     </Link>
 
                     <Link
-                      href={`/drills/builder?drillId=${drill.id}`}
+                      href={`/drills/${drill.id}/builder`}
                       className="secondary-button"
                       style={{ textDecoration: "none" }}
                     >

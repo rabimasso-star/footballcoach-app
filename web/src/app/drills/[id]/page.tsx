@@ -125,6 +125,7 @@ export default function DrillDetailPage({
         <Link href="/drills" style={{ color: "#334155", textDecoration: "none" }}>
           ← Back to drill library
         </Link>
+
         <h1 className="section-title" style={{ marginTop: 24 }}>
           Drill not found
         </h1>
@@ -155,7 +156,7 @@ export default function DrillDetailPage({
 
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
           <Link
-            href={`/drills/builder?drillId=${drillId}`}
+            href={`/drills/${drillId}/builder`}
             className="secondary-button"
             style={{ textDecoration: "none" }}
           >
@@ -235,7 +236,7 @@ export default function DrillDetailPage({
             </div>
 
             <Link
-              href={`/drills/builder?drillId=${drill.id}`}
+              href={`/drills/${drill.id}/builder`}
               className="secondary-button"
               style={{ textDecoration: "none" }}
             >

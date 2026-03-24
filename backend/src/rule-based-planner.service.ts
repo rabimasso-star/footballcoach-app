@@ -50,8 +50,10 @@ export class RuleBasedPlannerService {
   ) {}
 
   async autoPlan(input: AutoPlanInput): Promise<PlannedSessionDraft> {
-    const { teamId, coachId, durationMinutes, intensity, mainFocusTags, date } =
-      input;
+    const { teamId, coachId, mainFocusTags, date } = input;
+
+    const requestedDuration = this.toSafeInt(input.durationMinutes, 75);
+    const requestedIntensity = this.toSafeInt(input.intensity, 2);
 
     const analysis = await this.analyzer.analyzeTeam(teamId);
     const team = analysis.team;
@@ -61,7 +63,7 @@ export class RuleBasedPlannerService {
       team.competitionLevel,
       teamAge,
     );
-    const maxIntensity = this.getMaxIntensity(teamAge, intensity);
+    const maxIntensity = this.getMaxIntensity(teamAge, requestedIntensity);
 
     const userFocusTags = (mainFocusTags ?? '')
       .toLowerCase()
@@ -79,7 +81,7 @@ export class RuleBasedPlannerService {
 
     const blockTemplates = this.getSessionTemplateByAge(teamAge);
     const blockDurations = this.allocateDurations(
-      durationMinutes,
+      requestedDuration,
       blockTemplates,
     );
 
@@ -148,12 +150,23 @@ export class RuleBasedPlannerService {
       teamId,
       coachId,
       date,
-      durationMinutes,
+      durationMinutes: requestedDuration,
       intensity: maxIntensity,
       mainFocusTags: smartFocusTags.join(', '),
       createdBy: 'rule_engine',
       blocks,
     };
+  }
+
+  private toSafeInt(value: unknown, fallback: number): number {
+    const parsed =
+      typeof value === 'number' ? value : Number(String(value ?? '').trim());
+
+    if (!Number.isFinite(parsed)) {
+      return fallback;
+    }
+
+    return Math.round(parsed);
   }
 
   private buildSmartFocusTags(params: {
@@ -321,9 +334,11 @@ export class RuleBasedPlannerService {
   }
 
   private getMaxIntensity(age: number | null, requestedIntensity: number) {
-    if (age !== null && age <= 6) return Math.min(requestedIntensity, 1);
-    if (age !== null && age <= 9) return Math.min(requestedIntensity, 2);
-    return requestedIntensity;
+    const safeIntensity = this.toSafeInt(requestedIntensity, 2);
+
+    if (age !== null && age <= 6) return Math.min(safeIntensity, 1);
+    if (age !== null && age <= 9) return Math.min(safeIntensity, 2);
+    return safeIntensity;
   }
 
   private pickDrillsForBlock(params: {
@@ -374,8 +389,8 @@ export class RuleBasedPlannerService {
   private matchesAge(drill: any, age: number | null) {
     if (age === null) return true;
 
-    const minOk = drill.ageMin == null || drill.ageMin <= age;
-    const maxOk = drill.ageMax == null || drill.ageMax >= age;
+    const minOk = drill.ageMin == null || Number(drill.ageMin) <= age;
+    const maxOk = drill.ageMax == null || Number(drill.ageMax) >= age;
 
     return minOk && maxOk;
   }

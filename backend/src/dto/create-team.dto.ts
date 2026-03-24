@@ -1,4 +1,12 @@
-import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import {
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+  IsNotEmpty,
+} from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class CreateTeamDto {
   @IsOptional()
@@ -6,12 +14,15 @@ export class CreateTeamDto {
   coachId?: string;
 
   @IsString()
+  @IsNotEmpty()
   name!: string;
 
   @IsString()
+  @IsNotEmpty()
   ageGroup!: string;
 
   @IsString()
+  @IsNotEmpty()
   competitionLevel!: string;
 
   @IsOptional()
@@ -19,6 +30,7 @@ export class CreateTeamDto {
   primaryFormation?: string;
 
   @IsOptional()
+  @Type(() => Number)
   @IsInt()
   @Min(1)
   @Max(7)

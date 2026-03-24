@@ -15,38 +15,41 @@ type CreateTeamPayload = {
   primaryGoals?: string;
 };
 
+type CreateTeamResponse = {
+  id: string;
+};
+
 export default function NewTeamPage() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setIsSubmitting(true);
     setErrorMessage("");
-    setSuccessMessage("");
 
     const formData = new FormData(event.currentTarget);
 
     const payload: CreateTeamPayload = {
       coachId: String(formData.get("coachId") || "").trim() || undefined,
-      name: String(formData.get("name") || ""),
-      ageGroup: String(formData.get("ageGroup") || ""),
-      competitionLevel: String(formData.get("competitionLevel") || ""),
-      primaryFormation: String(formData.get("primaryFormation") || ""),
+      name: String(formData.get("name") || "").trim(),
+      ageGroup: String(formData.get("ageGroup") || "").trim(),
+      competitionLevel: String(formData.get("competitionLevel") || "").trim(),
+      primaryFormation:
+        String(formData.get("primaryFormation") || "").trim() || undefined,
       trainingDaysPerWeek:
         Number(formData.get("trainingDaysPerWeek") || 0) || undefined,
-      primaryGoals: String(formData.get("primaryGoals") || ""),
+      primaryGoals:
+        String(formData.get("primaryGoals") || "").trim() || undefined,
     };
 
     try {
-      const team = await apiFetch<{ id: string }>("/teams", {
+      const team = await apiFetch<CreateTeamResponse>("/teams", {
         method: "POST",
         body: JSON.stringify(payload),
       });
 
-      setSuccessMessage("Team profile created successfully.");
       router.push(`/teams/${team.id}`);
       router.refresh();
     } catch (error) {
@@ -61,55 +64,30 @@ export default function NewTeamPage() {
   }
 
   return (
-    <main style={{ maxWidth: 820, margin: "0 auto", padding: "48px 24px" }}>
+    <main style={pageStyle}>
       <div style={{ marginBottom: 24 }}>
-        <Link href="/" style={{ color: "#334155", textDecoration: "none" }}>
+        <Link href="/" style={backLinkStyle}>
           ← Back to dashboard
         </Link>
       </div>
 
-      <section
-        style={{
-          border: "1px solid #e2e8f0",
-          borderRadius: 24,
-          padding: 28,
-          background: "#fff",
-          color: "#0f172a",
-        }}
-      >
+      <section style={cardStyle}>
         <div style={{ marginBottom: 28 }}>
-          <p
-            style={{
-              display: "inline-block",
-              marginBottom: 12,
-              padding: "6px 10px",
-              borderRadius: 999,
-              background: "#dcfce7",
-              color: "#166534",
-              fontSize: 12,
-              fontWeight: 700,
-              textTransform: "uppercase",
-            }}
-          >
-            Team profile
-          </p>
+          <p style={badgeStyle}>Team profile</p>
 
-          <h1 style={{ fontSize: 34, marginBottom: 10 }}>
-            Create a new team
-          </h1>
+          <h1 style={{ fontSize: 34, marginBottom: 10 }}>Create a new team</h1>
 
-          <p style={{ color: "#475569", maxWidth: 700 }}>
-            Fill in the team details that should guide future AI training
-            suggestions.
+          <p style={{ color: "#475569", maxWidth: 700, margin: 0 }}>
+            Fill in the team details that should guide future training plans,
+            drill suggestions and team-specific recommendations.
           </p>
         </div>
 
         <form onSubmit={handleSubmit} style={{ display: "grid", gap: 18 }}>
-          <div style={{ display: "grid", gap: 8 }}>
-            <label htmlFor="coachId" style={{ fontWeight: 600 }}>
+          <div style={fieldStyle}>
+            <label htmlFor="coachId" style={labelStyle}>
               Coach ID
             </label>
-
             <input
               id="coachId"
               name="coachId"
@@ -118,11 +96,10 @@ export default function NewTeamPage() {
             />
           </div>
 
-          <div style={{ display: "grid", gap: 8 }}>
-            <label htmlFor="name" style={{ fontWeight: 600 }}>
+          <div style={fieldStyle}>
+            <label htmlFor="name" style={labelStyle}>
               Team name
             </label>
-
             <input
               id="name"
               name="name"
@@ -132,18 +109,11 @@ export default function NewTeamPage() {
             />
           </div>
 
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-              gap: 18,
-            }}
-          >
-            <div style={{ display: "grid", gap: 8 }}>
-              <label htmlFor="ageGroup" style={{ fontWeight: 600 }}>
+          <div style={twoColumnGridStyle}>
+            <div style={fieldStyle}>
+              <label htmlFor="ageGroup" style={labelStyle}>
                 Age group
               </label>
-
               <input
                 id="ageGroup"
                 name="ageGroup"
@@ -153,38 +123,30 @@ export default function NewTeamPage() {
               />
             </div>
 
-            <div style={{ display: "grid", gap: 8 }}>
-              <label htmlFor="competitionLevel" style={{ fontWeight: 600 }}>
+            <div style={fieldStyle}>
+              <label htmlFor="competitionLevel" style={labelStyle}>
                 Competition level
               </label>
-
               <select
                 id="competitionLevel"
                 name="competitionLevel"
                 defaultValue="Development"
                 style={inputStyle}
               >
-                <option>Development</option>
-                <option>Grassroots</option>
-                <option>Intermediate</option>
-                <option>Advanced</option>
-                <option>Elite academy</option>
+                <option value="Development">Development</option>
+                <option value="Grassroots">Grassroots</option>
+                <option value="Intermediate">Intermediate</option>
+                <option value="Advanced">Advanced</option>
+                <option value="Elite academy">Elite academy</option>
               </select>
             </div>
           </div>
 
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-              gap: 18,
-            }}
-          >
-            <div style={{ display: "grid", gap: 8 }}>
-              <label htmlFor="primaryFormation" style={{ fontWeight: 600 }}>
+          <div style={twoColumnGridStyle}>
+            <div style={fieldStyle}>
+              <label htmlFor="primaryFormation" style={labelStyle}>
                 Primary formation
               </label>
-
               <input
                 id="primaryFormation"
                 name="primaryFormation"
@@ -193,11 +155,10 @@ export default function NewTeamPage() {
               />
             </div>
 
-            <div style={{ display: "grid", gap: 8 }}>
-              <label htmlFor="trainingDaysPerWeek" style={{ fontWeight: 600 }}>
+            <div style={fieldStyle}>
+              <label htmlFor="trainingDaysPerWeek" style={labelStyle}>
                 Training days per week
               </label>
-
               <input
                 id="trainingDaysPerWeek"
                 name="trainingDaysPerWeek"
@@ -210,11 +171,10 @@ export default function NewTeamPage() {
             </div>
           </div>
 
-          <div style={{ display: "grid", gap: 8 }}>
-            <label htmlFor="primaryGoals" style={{ fontWeight: 600 }}>
+          <div style={fieldStyle}>
+            <label htmlFor="primaryGoals" style={labelStyle}>
               Primary goals
             </label>
-
             <textarea
               id="primaryGoals"
               name="primaryGoals"
@@ -224,60 +184,24 @@ export default function NewTeamPage() {
             />
           </div>
 
-          {errorMessage && (
-            <div
-              style={{
-                borderRadius: 14,
-                background: "#fef2f2",
-                color: "#991b1b",
-                padding: "12px 14px",
-              }}
-            >
-              {errorMessage}
-            </div>
-          )}
+          {errorMessage ? (
+            <div style={errorBoxStyle}>{errorMessage}</div>
+          ) : null}
 
-          {successMessage && (
-            <div
-              style={{
-                borderRadius: 14,
-                background: "#f0fdf4",
-                color: "#166534",
-                padding: "12px 14px",
-              }}
-            >
-              {successMessage}
-            </div>
-          )}
-
-          <div style={{ display: "flex", gap: 12 }}>
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
             <button
               type="submit"
               disabled={isSubmitting}
               style={{
-                border: "none",
-                borderRadius: 14,
-                background: "#0f172a",
-                color: "#fff",
-                padding: "14px 18px",
-                fontWeight: 700,
-                cursor: "pointer",
+                ...primaryButtonStyle,
+                opacity: isSubmitting ? 0.7 : 1,
+                cursor: isSubmitting ? "not-allowed" : "pointer",
               }}
             >
-              Save team profile
+              {isSubmitting ? "Saving..." : "Save team profile"}
             </button>
 
-            <Link
-              href="/"
-              style={{
-                borderRadius: 14,
-                border: "1px solid #cbd5e1",
-                padding: "14px 18px",
-                textDecoration: "none",
-                color: "#0f172a",
-                fontWeight: 700,
-              }}
-            >
+            <Link href="/" style={secondaryButtonStyle}>
               Cancel
             </Link>
           </div>
@@ -287,12 +211,87 @@ export default function NewTeamPage() {
   );
 }
 
+const pageStyle: React.CSSProperties = {
+  maxWidth: 820,
+  margin: "0 auto",
+  padding: "48px 24px",
+};
+
+const cardStyle: React.CSSProperties = {
+  border: "1px solid #e2e8f0",
+  borderRadius: 24,
+  padding: 28,
+  background: "#ffffff",
+  color: "#0f172a",
+  boxShadow: "0 10px 30px rgba(15, 23, 42, 0.05)",
+};
+
+const badgeStyle: React.CSSProperties = {
+  display: "inline-block",
+  marginBottom: 12,
+  padding: "6px 10px",
+  borderRadius: 999,
+  background: "#dcfce7",
+  color: "#166534",
+  fontSize: 12,
+  fontWeight: 700,
+  textTransform: "uppercase",
+};
+
+const backLinkStyle: React.CSSProperties = {
+  color: "#334155",
+  textDecoration: "none",
+  fontWeight: 600,
+};
+
+const fieldStyle: React.CSSProperties = {
+  display: "grid",
+  gap: 8,
+};
+
+const twoColumnGridStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+  gap: 18,
+};
+
+const labelStyle: React.CSSProperties = {
+  fontWeight: 600,
+};
+
 const inputStyle: React.CSSProperties = {
   width: "100%",
   border: "1px solid #cbd5e1",
   borderRadius: 14,
   padding: "12px 14px",
   fontSize: 16,
-  background: "#fff",
+  background: "#ffffff",
   color: "#0f172a",
+  outline: "none",
+};
+
+const primaryButtonStyle: React.CSSProperties = {
+  border: "none",
+  borderRadius: 14,
+  background: "#0f172a",
+  color: "#ffffff",
+  padding: "14px 18px",
+  fontWeight: 700,
+};
+
+const secondaryButtonStyle: React.CSSProperties = {
+  borderRadius: 14,
+  border: "1px solid #cbd5e1",
+  padding: "14px 18px",
+  textDecoration: "none",
+  color: "#0f172a",
+  fontWeight: 700,
+};
+
+const errorBoxStyle: React.CSSProperties = {
+  borderRadius: 14,
+  background: "#fef2f2",
+  color: "#991b1b",
+  padding: "12px 14px",
+  border: "1px solid #fecaca",
 };
