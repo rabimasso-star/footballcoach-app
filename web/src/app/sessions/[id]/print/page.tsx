@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { API_BASE_URL } from "@/lib/api";
+import PrintButton from "@/components/print-button";
 
 type Drill = {
   id: string;
@@ -165,6 +166,8 @@ export default async function SessionPrintPage({
         <Link href={`/sessions/${session.id}`} style={linkStyle}>
           ← Back to session
         </Link>
+
+        <PrintButton />
       </div>
 
       <section style={paperStyle}>
@@ -176,7 +179,7 @@ export default async function SessionPrintPage({
         </div>
 
         <div style={helperBoxStyle}>
-          Open your browser print dialog and choose <strong>Save as PDF</strong>.
+          Click <strong>Print / Save as PDF</strong> to export this session.
         </div>
 
         <div style={metaGridStyle}>
