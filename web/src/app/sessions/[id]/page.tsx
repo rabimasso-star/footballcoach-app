@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { API_BASE_URL } from "@/lib/api";
+import RegenerateBlockButton from "@/components/regenerate-block-button";
 
 type Drill = {
   id: string;
@@ -255,6 +256,7 @@ export default async function SessionDetailPage({
                   gap: 12,
                   flexWrap: "wrap",
                   marginBottom: 12,
+                  alignItems: "flex-start",
                 }}
               >
                 <div>
@@ -275,14 +277,28 @@ export default async function SessionDetailPage({
 
                 <div
                   style={{
-                    padding: "8px 12px",
-                    borderRadius: 999,
-                    background: "#fff",
-                    border: "1px solid #e2e8f0",
-                    fontWeight: 700,
+                    display: "flex",
+                    gap: 10,
+                    flexWrap: "wrap",
+                    alignItems: "center",
                   }}
                 >
-                  {block.durationMinutes} min
+                  <div
+                    style={{
+                      padding: "8px 12px",
+                      borderRadius: 999,
+                      background: "#fff",
+                      border: "1px solid #e2e8f0",
+                      fontWeight: 700,
+                    }}
+                  >
+                    {block.durationMinutes} min
+                  </div>
+
+                  <RegenerateBlockButton
+                    sessionId={session.id}
+                    blockId={block.id}
+                  />
                 </div>
               </div>
 
