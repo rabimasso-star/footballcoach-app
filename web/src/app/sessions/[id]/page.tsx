@@ -31,7 +31,6 @@ type TrainingBlock = {
 type TrainingSession = {
   id: string;
   title: string;
-  objective?: string | null;
   date: string;
   durationMinutes: number;
   intensity: number;
@@ -176,13 +175,23 @@ export default async function SessionDetailPage({
           ← Back to dashboard
         </Link>
 
-        <Link
-          href={`/sessions/${session.id}/print`}
-          className="secondary-button"
-          style={{ textDecoration: "none" }}
-        >
-          Open print view
-        </Link>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <Link
+            href={`/sessions/${session.id}/edit`}
+            className="secondary-button"
+            style={{ textDecoration: "none" }}
+          >
+            Edit session
+          </Link>
+
+          <Link
+            href={`/sessions/${session.id}/print`}
+            className="secondary-button"
+            style={{ textDecoration: "none" }}
+          >
+            Open print view
+          </Link>
+        </div>
       </div>
 
       <section className="card" style={{ padding: 28, marginBottom: 24 }}>
@@ -193,7 +202,7 @@ export default async function SessionDetailPage({
         <h1 className="section-title">{session.title}</h1>
 
         <p className="section-subtitle" style={{ marginBottom: 20 }}>
-          {session.objective || "AI-generated training session"}
+          AI-generated training session
         </p>
 
         <div
