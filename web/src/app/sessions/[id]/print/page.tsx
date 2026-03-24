@@ -7,8 +7,6 @@ type Drill = {
   name?: string | null;
   description?: string | null;
   coachingPoints?: string | null;
-  durationMinutes?: number | null;
-  durationMin?: number | null;
 };
 
 type TrainingBlockDrill = {
@@ -132,7 +130,7 @@ async function fetchLayoutsForSession(
   return Object.fromEntries(results);
 }
 
-export default async function SessionDetailPage({
+export default async function SessionPrintPage({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -142,18 +140,19 @@ export default async function SessionDetailPage({
 
   if (!session) {
     return (
-      <main className="page-shell">
-        <Link href="/" style={{ color: "#334155", textDecoration: "none" }}>
-          ← Back to dashboard
-        </Link>
+      <main style={pageStyle}>
+        <div style={toolbarStyle}>
+          <Link href={`/sessions/${id}`} style={linkStyle}>
+            ← Back to session
+          </Link>
+        </div>
 
-        <h1 className="section-title" style={{ marginTop: 24 }}>
-          Session not found
-        </h1>
-
-        <p className="section-subtitle">
-          Check that the backend returned a session and that the route exists.
-        </p>
+        <section style={paperStyle}>
+          <h1 style={titleStyle}>Session not found</h1>
+          <p style={mutedStyle}>
+            Check that the session exists and the backend is running.
+          </p>
+        </section>
       </main>
     );
   }
@@ -161,136 +160,61 @@ export default async function SessionDetailPage({
   const drillLayouts = await fetchLayoutsForSession(session);
 
   return (
-    <main className="page-shell">
-      <div
-        style={{
-          marginBottom: 20,
-          display: "flex",
-          justifyContent: "space-between",
-          gap: 12,
-          flexWrap: "wrap",
-          alignItems: "center",
-        }}
-      >
-        <Link href="/" style={{ color: "#334155", textDecoration: "none" }}>
-          ← Back to dashboard
-        </Link>
-
-        <Link
-          href={`/sessions/${session.id}/print`}
-          className="secondary-button"
-          style={{ textDecoration: "none" }}
-        >
-          Open print view
+    <main style={pageStyle}>
+      <div style={toolbarStyle}>
+        <Link href={`/sessions/${session.id}`} style={linkStyle}>
+          ← Back to session
         </Link>
       </div>
 
-      <section className="card" style={{ padding: 28, marginBottom: 24 }}>
-        <p className="badge badge-blue" style={{ marginBottom: 12 }}>
-          Training session
-        </p>
+      <section style={paperStyle}>
+        <div style={printOnlyHeaderStyle}>
+          <h1 style={titleStyle}>{session.title}</h1>
+          <p style={mutedStyle}>
+            {session.objective || "AI-generated training session"}
+          </p>
+        </div>
 
-        <h1 className="section-title">{session.title}</h1>
+        <div style={helperBoxStyle}>
+          Open your browser print dialog and choose <strong>Save as PDF</strong>.
+        </div>
 
-        <p className="section-subtitle" style={{ marginBottom: 20 }}>
-          {session.objective || "AI-generated training session"}
-        </p>
-
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-            gap: 16,
-          }}
-        >
-          <InfoCard label="Date" value={formatDate(session.date)} />
-          <InfoCard label="Duration" value={`${session.durationMinutes} min`} />
-          <InfoCard label="Intensity" value={formatIntensity(session.intensity)} />
+        <div style={metaGridStyle}>
+          <PrintMeta label="Date" value={formatDate(session.date)} />
+          <PrintMeta label="Duration" value={`${session.durationMinutes} min`} />
+          <PrintMeta label="Intensity" value={formatIntensity(session.intensity)} />
         </div>
 
         {session.mainFocusTags ? (
-          <div
-            style={{
-              marginTop: 20,
-              borderRadius: 16,
-              background: "#f8fafc",
-              border: "1px solid #e2e8f0",
-              padding: 16,
-            }}
-          >
-            <p style={{ margin: 0, color: "#334155" }}>
-              <strong>Main focus:</strong> {session.mainFocusTags}
-            </p>
+          <div style={focusBoxStyle}>
+            <strong>Main focus:</strong> {session.mainFocusTags}
           </div>
         ) : null}
-      </section>
 
-      <section className="card" style={{ padding: 28 }}>
-        <h2 style={{ fontSize: 26, marginBottom: 18 }}>Session blocks</h2>
-
-        <div style={{ display: "grid", gap: 18 }}>
+        <div style={{ display: "grid", gap: 24 }}>
           {session.blocks.map((block, index) => (
-            <article
-              key={block.id}
-              style={{
-                border: "1px solid #e2e8f0",
-                borderRadius: 18,
-                padding: 20,
-                background: "#f8fafc",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  gap: 12,
-                  flexWrap: "wrap",
-                  marginBottom: 12,
-                }}
-              >
+            <section key={block.id} style={blockStyle}>
+              <div style={blockHeaderStyle}>
                 <div>
-                  <p
-                    style={{
-                      color: "#64748b",
-                      marginBottom: 6,
-                      fontWeight: 600,
-                    }}
-                  >
-                    Block {index + 1}
-                  </p>
-
-                  <h3 style={{ fontSize: 22, margin: 0 }}>
-                    {formatBlockType(block.type)}
-                  </h3>
+                  <p style={blockIndexStyle}>Block {index + 1}</p>
+                  <h2 style={blockTitleStyle}>{formatBlockType(block.type)}</h2>
                 </div>
 
-                <div
-                  style={{
-                    padding: "8px 12px",
-                    borderRadius: 999,
-                    background: "#fff",
-                    border: "1px solid #e2e8f0",
-                    fontWeight: 700,
-                  }}
-                >
-                  {block.durationMinutes} min
-                </div>
+                <div style={durationPillStyle}>{block.durationMinutes} min</div>
               </div>
 
               {block.focusTags ? (
-                <p style={{ color: "#475569", marginBottom: 10 }}>
+                <p style={paragraphStyle}>
                   <strong>Focus:</strong> {block.focusTags}
                 </p>
               ) : null}
 
               {block.description ? (
-                <p style={{ color: "#334155", marginBottom: 16 }}>
-                  {block.description}
-                </p>
+                <p style={paragraphStyle}>{block.description}</p>
               ) : null}
 
               {block.drills.length > 0 ? (
-                <div style={{ display: "grid", gap: 14 }}>
+                <div style={{ display: "grid", gap: 18 }}>
                   {block.drills.map((item) => {
                     const layout = drillLayouts[item.drill.id];
                     const hasLayout =
@@ -299,37 +223,8 @@ export default async function SessionDetailPage({
                         (Array.isArray(layout.lines) && layout.lines.length > 0));
 
                     return (
-                      <div
-                        key={item.id}
-                        style={{
-                          borderRadius: 14,
-                          background: "#fff",
-                          border: "1px solid #e2e8f0",
-                          padding: 14,
-                        }}
-                      >
-                        <div
-                          style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            gap: 12,
-                            flexWrap: "wrap",
-                            alignItems: "center",
-                            marginBottom: 12,
-                          }}
-                        >
-                          <h4 style={{ margin: 0, fontSize: 18 }}>
-                            {getDrillName(item.drill)}
-                          </h4>
-
-                          <Link
-                            href={`/drills/${item.drill.id}`}
-                            className="secondary-button"
-                            style={{ textDecoration: "none" }}
-                          >
-                            View drill
-                          </Link>
-                        </div>
+                      <article key={item.id} style={drillCardStyle}>
+                        <h3 style={drillTitleStyle}>{getDrillName(item.drill)}</h3>
 
                         {hasLayout && layout ? (
                           <div
@@ -338,9 +233,9 @@ export default async function SessionDetailPage({
                               width: "100%",
                               aspectRatio: `${FIELD_WIDTH} / ${FIELD_HEIGHT}`,
                               background: "#3f8f47",
-                              borderRadius: 20,
+                              borderRadius: 16,
                               overflow: "hidden",
-                              border: "4px solid #d1fae5",
+                              border: "3px solid #d1fae5",
                               marginBottom: 12,
                             }}
                           >
@@ -359,7 +254,7 @@ export default async function SessionDetailPage({
                             >
                               <defs>
                                 <marker
-                                  id={`arrowhead-${item.id}`}
+                                  id={`print-arrowhead-${item.id}`}
                                   markerWidth="10"
                                   markerHeight="10"
                                   refX="8"
@@ -381,7 +276,7 @@ export default async function SessionDetailPage({
                                       y2={line.y2}
                                       stroke="#0f172a"
                                       strokeWidth={4}
-                                      markerEnd={`url(#arrowhead-${item.id})`}
+                                      markerEnd={`url(#print-arrowhead-${item.id})`}
                                     />
                                   );
                                 }
@@ -423,49 +318,32 @@ export default async function SessionDetailPage({
                               ))}
                             </div>
                           </div>
-                        ) : (
-                          <div
-                            style={{
-                              borderRadius: 14,
-                              background: "#f8fafc",
-                              border: "1px dashed #cbd5e1",
-                              padding: 14,
-                              marginBottom: 12,
-                              color: "#64748b",
-                            }}
-                          >
-                            No saved drill diagram for this exercise yet.
-                          </div>
-                        )}
+                        ) : null}
 
                         {item.drill.description ? (
-                          <p style={{ color: "#475569", marginBottom: 8 }}>
-                            {item.drill.description}
-                          </p>
+                          <p style={paragraphStyle}>{item.drill.description}</p>
                         ) : null}
 
                         {item.drill.coachingPoints ? (
-                          <p style={{ color: "#334155", marginBottom: 8 }}>
+                          <p style={paragraphStyle}>
                             <strong>Coaching points:</strong>{" "}
                             {item.drill.coachingPoints}
                           </p>
                         ) : null}
 
                         {item.customNotes ? (
-                          <p style={{ color: "#334155", margin: 0 }}>
+                          <p style={paragraphStyle}>
                             <strong>Notes:</strong> {item.customNotes}
                           </p>
                         ) : null}
-                      </div>
+                      </article>
                     );
                   })}
                 </div>
               ) : (
-                <p style={{ color: "#64748b", margin: 0 }}>
-                  No drills were attached to this block.
-                </p>
+                <p style={mutedStyle}>No drills attached to this block.</p>
               )}
-            </article>
+            </section>
           ))}
         </div>
       </section>
@@ -473,18 +351,11 @@ export default async function SessionDetailPage({
   );
 }
 
-function InfoCard({ label, value }: { label: string; value: string }) {
+function PrintMeta({ label, value }: { label: string; value: string }) {
   return (
-    <div
-      style={{
-        border: "1px solid #e2e8f0",
-        borderRadius: 18,
-        padding: 18,
-        background: "#f8fafc",
-      }}
-    >
-      <p style={{ color: "#64748b", marginBottom: 8 }}>{label}</p>
-      <p style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>{value}</p>
+    <div style={metaCardStyle}>
+      <p style={metaLabelStyle}>{label}</p>
+      <p style={metaValueStyle}>{value}</p>
     </div>
   );
 }
@@ -556,8 +427,8 @@ function renderBoardItem(item: BoardItem) {
     return (
       <div
         style={{
-          width: 34,
-          height: 34,
+          width: 30,
+          height: 30,
           borderRadius: "50%",
           background: "#0f172a",
           color: "#fff",
@@ -565,9 +436,8 @@ function renderBoardItem(item: BoardItem) {
           alignItems: "center",
           justifyContent: "center",
           fontWeight: 700,
-          fontSize: 13,
+          fontSize: 12,
           border: "2px solid #fff",
-          boxShadow: "0 6px 16px rgba(0,0,0,0.18)",
         }}
       >
         {item.label || "P"}
@@ -581,9 +451,9 @@ function renderBoardItem(item: BoardItem) {
         style={{
           width: 0,
           height: 0,
-          borderLeft: "14px solid transparent",
-          borderRight: "14px solid transparent",
-          borderBottom: "30px solid #fb923c",
+          borderLeft: "12px solid transparent",
+          borderRight: "12px solid transparent",
+          borderBottom: "26px solid #fb923c",
         }}
       />
     );
@@ -592,12 +462,11 @@ function renderBoardItem(item: BoardItem) {
   return (
     <div
       style={{
-        width: 18,
-        height: 18,
+        width: 16,
+        height: 16,
         borderRadius: "50%",
         background: "#fff",
         border: "2px solid #0f172a",
-        boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
       }}
     />
   );
@@ -638,3 +507,150 @@ function formatBlockType(value: string) {
       return value.charAt(0).toUpperCase() + value.slice(1);
   }
 }
+
+const pageStyle: React.CSSProperties = {
+  background: "#eef2ff",
+  minHeight: "100vh",
+  padding: "32px 20px",
+};
+
+const toolbarStyle: React.CSSProperties = {
+  maxWidth: 960,
+  margin: "0 auto 20px",
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+};
+
+const paperStyle: React.CSSProperties = {
+  maxWidth: 960,
+  margin: "0 auto",
+  background: "#ffffff",
+  borderRadius: 20,
+  padding: 32,
+  border: "1px solid #e2e8f0",
+  boxShadow: "0 10px 30px rgba(15, 23, 42, 0.08)",
+  display: "grid",
+  gap: 24,
+};
+
+const printOnlyHeaderStyle: React.CSSProperties = {
+  display: "grid",
+  gap: 8,
+};
+
+const helperBoxStyle: React.CSSProperties = {
+  borderRadius: 14,
+  border: "1px solid #e2e8f0",
+  background: "#f8fafc",
+  padding: 14,
+  color: "#334155",
+};
+
+const titleStyle: React.CSSProperties = {
+  fontSize: 36,
+  lineHeight: 1.1,
+  margin: 0,
+  color: "#0f172a",
+};
+
+const mutedStyle: React.CSSProperties = {
+  margin: 0,
+  color: "#64748b",
+};
+
+const metaGridStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+  gap: 16,
+};
+
+const metaCardStyle: React.CSSProperties = {
+  border: "1px solid #e2e8f0",
+  borderRadius: 16,
+  padding: 16,
+  background: "#f8fafc",
+};
+
+const metaLabelStyle: React.CSSProperties = {
+  margin: "0 0 8px",
+  color: "#64748b",
+};
+
+const metaValueStyle: React.CSSProperties = {
+  margin: 0,
+  fontSize: 22,
+  fontWeight: 700,
+  color: "#0f172a",
+};
+
+const focusBoxStyle: React.CSSProperties = {
+  borderRadius: 16,
+  border: "1px solid #e2e8f0",
+  background: "#f8fafc",
+  padding: 16,
+  color: "#334155",
+};
+
+const blockStyle: React.CSSProperties = {
+  border: "1px solid #e2e8f0",
+  borderRadius: 18,
+  padding: 20,
+  background: "#ffffff",
+  display: "grid",
+  gap: 12,
+};
+
+const blockHeaderStyle: React.CSSProperties = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "flex-start",
+  gap: 12,
+  flexWrap: "wrap",
+};
+
+const blockIndexStyle: React.CSSProperties = {
+  margin: "0 0 6px",
+  color: "#64748b",
+  fontWeight: 600,
+};
+
+const blockTitleStyle: React.CSSProperties = {
+  margin: 0,
+  fontSize: 24,
+  color: "#0f172a",
+};
+
+const durationPillStyle: React.CSSProperties = {
+  padding: "8px 12px",
+  borderRadius: 999,
+  border: "1px solid #e2e8f0",
+  background: "#f8fafc",
+  fontWeight: 700,
+  color: "#0f172a",
+};
+
+const drillCardStyle: React.CSSProperties = {
+  border: "1px solid #e2e8f0",
+  borderRadius: 16,
+  padding: 16,
+  background: "#f8fafc",
+};
+
+const drillTitleStyle: React.CSSProperties = {
+  margin: "0 0 12px",
+  fontSize: 20,
+  color: "#0f172a",
+};
+
+const paragraphStyle: React.CSSProperties = {
+  margin: "0 0 10px",
+  color: "#334155",
+  lineHeight: 1.5,
+};
+
+const linkStyle: React.CSSProperties = {
+  color: "#334155",
+  textDecoration: "none",
+  fontWeight: 600,
+};
