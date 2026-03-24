@@ -321,4 +321,20 @@ export class SessionsController {
       },
     });
   }
+
+  @Post(':sessionId/blocks/:blockId/regenerate')
+  async regenerateBlock(
+    @Param('sessionId') sessionId: string,
+    @Param('blockId') blockId: string,
+  ) {
+    const block = await this.ai.regenerateBlock({
+      sessionId,
+      blockId,
+    });
+
+    return {
+      id: block?.id,
+      block,
+    };
+  }
 }
