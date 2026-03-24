@@ -73,150 +73,6 @@ export class AiSessionService {
     };
   }
 
-  async regenerateBlock(params: {
-    sessionId: string;
-    blockId: string;
-  }) {
-    const session = await this.prisma.trainingSession.findUnique({
-      where: { id: params.sessionId },
-      include: {
-        team: {
-          include: {
-            players: {
-              include: {
-                attributes: true,
-              },
-            },
-          },
-        },
-        blocks: {
-          include: {
-            drills: {
-              include: {
-                drill: true,
-              },
-              orderBy: {
-                order: 'asc',
-              },
-            },
-          },
-          orderBy: {
-            order: 'asc',
-          },
-        },
-      },
-    });
-
-    if (!session) {
-      throw new Error('Session not found');
-    }
-
-    const block = session.blocks.find((item) => item.id === params.blockId);
-
-    if (!block) {
-      throw new Error('Block not found');
-    }
-
-    const players = session.team.players ?? [];
-    const averages = this.calculateAverageAttributes(players);
-    const { strengths, weaknesses } = this.getStrengthsAndWeaknesses(averages);
-
-    const currentDrillId = block.drills[0]?.drillId ?? null;
-
-    const existingDrillIds = session.blocks
-      .flatMap((item) => item.drills.map((drill) => drill.drillId))
-      .filter((drillId) => drillId !== currentDrillId);
-
-    const focusTags = String(block.focusTags || session.mainFocusTags || '')
-      .toLowerCase()
-      .split(',')
-      .map((tag) => tag.trim())
-      .filter(Boolean);
-
-    const categoryCandidates = this.getDrillCategoriesForBlockType(block.type);
-
-    const availableDrills = await this.prisma.drill.findMany({
-      where: {
-        category: {
-          in: categoryCandidates,
-        },
-        difficulty: {
-          lte: 5,
-        },
-        intensity: {
-          lte: session.intensity,
-        },
-      },
-      orderBy: [{ difficulty: 'asc' }, { durationMin: 'asc' }],
-    });
-
-    const teamAge = this.extractAge(session.team.ageGroup);
-
-    const scoredDrills = availableDrills
-      .filter((drill) => !existingDrillIds.includes(drill.id))
-      .filter((drill) => this.matchesAge(drill, teamAge))
-      .map((drill) => ({
-        drill,
-        score: this.scoreDrillForRegeneration(drill, block.type, focusTags),
-      }))
-      .sort((a, b) => b.score - a.score);
-
-    const replacementDrill =
-      scoredDrills.find((item) => item.drill.id !== currentDrillId)?.drill ??
-      block.drills[0]?.drill ??
-      null;
-
-    const nextDescription = this.buildRegeneratedBlockDescription({
-      blockType: block.type,
-      focusTags,
-      strengths,
-      weaknesses,
-      drillName: replacementDrill?.name ?? null,
-    });
-
-    await this.prisma.trainingBlock.update({
-      where: { id: block.id },
-      data: {
-        description: nextDescription,
-      },
-    });
-
-    await this.prisma.trainingBlockDrill.deleteMany({
-      where: { blockId: block.id },
-    });
-
-    if (replacementDrill) {
-      await this.prisma.trainingBlockDrill.create({
-        data: {
-          blockId: block.id,
-          drillId: replacementDrill.id,
-          order: 1,
-          customNotes: this.buildRegeneratedCustomNotes({
-            blockType: block.type,
-            strengths,
-            weaknesses,
-          }),
-        },
-      });
-    }
-
-    const updatedBlock = await this.prisma.trainingBlock.findUnique({
-      where: { id: block.id },
-      include: {
-        drills: {
-          include: {
-            drill: true,
-          },
-          orderBy: {
-            order: 'asc',
-          },
-        },
-      },
-    });
-
-    return updatedBlock;
-  }
-
   async getRelatedDrills(params: {
     sessionId: string;
     blockId: string;
@@ -284,11 +140,7 @@ export class AiSessionService {
       .filter((drill) => drill.id !== currentDrillId)
       .map((drill) => ({
         ...drill,
-        relatedScore: this.scoreDrillForRegeneration(
-          drill,
-          block.type,
-          focusTags,
-        ),
+        relatedScore: this.scoreDrillForSelection(drill, block.type, focusTags),
       }))
       .sort((a, b) => b.relatedScore - a.relatedScore)
       .slice(0, 6);
@@ -298,6 +150,137 @@ export class AiSessionService {
       currentDrillId,
       drills: relatedDrills,
     };
+  }
+
+  async useDrillForBlock(params: {
+    sessionId: string;
+    blockId: string;
+    drillId: string;
+  }) {
+    const session = await this.prisma.trainingSession.findUnique({
+      where: { id: params.sessionId },
+      include: {
+        team: {
+          include: {
+            players: {
+              include: {
+                attributes: true,
+              },
+            },
+          },
+        },
+        blocks: {
+          include: {
+            drills: {
+              include: {
+                drill: true,
+              },
+              orderBy: {
+                order: 'asc',
+              },
+            },
+          },
+          orderBy: {
+            order: 'asc',
+          },
+        },
+      },
+    });
+
+    if (!session) {
+      throw new Error('Session not found');
+    }
+
+    const block = session.blocks.find((item) => item.id === params.blockId);
+
+    if (!block) {
+      throw new Error('Block not found');
+    }
+
+    const selectedDrill = await this.prisma.drill.findUnique({
+      where: { id: params.drillId },
+    });
+
+    if (!selectedDrill) {
+      throw new Error('Drill not found');
+    }
+
+    const teamAge = this.extractAge(session.team.ageGroup);
+    if (!this.matchesAge(selectedDrill, teamAge)) {
+      throw new Error('Selected drill does not match team age group.');
+    }
+
+    const categoryCandidates = this.getDrillCategoriesForBlockType(block.type);
+    const selectedCategory = String(selectedDrill.category ?? '').toLowerCase();
+
+    if (!categoryCandidates.includes(selectedCategory)) {
+      throw new Error('Selected drill does not match this block type.');
+    }
+
+    if (
+      selectedDrill.intensity != null &&
+      Number(selectedDrill.intensity) > Number(session.intensity)
+    ) {
+      throw new Error('Selected drill is too intense for this session.');
+    }
+
+    const players = session.team.players ?? [];
+    const averages = this.calculateAverageAttributes(players);
+    const { strengths, weaknesses } = this.getStrengthsAndWeaknesses(averages);
+
+    const focusTags = String(block.focusTags || session.mainFocusTags || '')
+      .toLowerCase()
+      .split(',')
+      .map((tag) => tag.trim())
+      .filter(Boolean);
+
+    const nextDescription = this.buildBlockDescription({
+      blockType: block.type,
+      focusTags,
+      strengths,
+      weaknesses,
+      drillName: selectedDrill.name ?? null,
+    });
+
+    await this.prisma.trainingBlock.update({
+      where: { id: block.id },
+      data: {
+        description: nextDescription,
+      },
+    });
+
+    await this.prisma.trainingBlockDrill.deleteMany({
+      where: { blockId: block.id },
+    });
+
+    await this.prisma.trainingBlockDrill.create({
+      data: {
+        blockId: block.id,
+        drillId: selectedDrill.id,
+        order: 1,
+        customNotes: this.buildCustomNotes({
+          blockType: block.type,
+          strengths,
+          weaknesses,
+        }),
+      },
+    });
+
+    const updatedBlock = await this.prisma.trainingBlock.findUnique({
+      where: { id: block.id },
+      include: {
+        drills: {
+          include: {
+            drill: true,
+          },
+          orderBy: {
+            order: 'asc',
+          },
+        },
+      },
+    });
+
+    return updatedBlock;
   }
 
   private getStrengthsAndWeaknesses(averages: {
@@ -472,7 +455,7 @@ export class AiSessionService {
     return ['warmup', 'technical', 'possession', 'game', 'finishing'];
   }
 
-  private scoreDrillForRegeneration(
+  private scoreDrillForSelection(
     drill: any,
     blockType: string,
     focusTags: string[],
@@ -499,7 +482,7 @@ export class AiSessionService {
     return score;
   }
 
-  private buildRegeneratedBlockDescription(params: {
+  private buildBlockDescription(params: {
     blockType: string;
     focusTags: string[];
     strengths: string[];
@@ -524,29 +507,29 @@ export class AiSessionService {
     const drillText = drillName ? ` Recommended drill: ${drillName}.` : '';
 
     if (blockType === 'warmup') {
-      return `New warm-up block with activation, ball touches and readiness for the main theme.${focusText}${weaknessText}${drillText}`.trim();
+      return `Warm-up block with activation, ball touches and readiness for the main theme.${focusText}${weaknessText}${drillText}`.trim();
     }
 
     if (blockType === 'technical') {
-      return `New technical block with repetition and quality under realistic pressure.${focusText}${weaknessText}${drillText}`.trim();
+      return `Technical block with repetition and quality under realistic pressure.${focusText}${weaknessText}${drillText}`.trim();
     }
 
     if (blockType === 'possession') {
-      return `New possession block focused on support play, awareness and tempo.${focusText}${weaknessText}${drillText}`.trim();
+      return `Possession block focused on support play, awareness and tempo.${focusText}${weaknessText}${drillText}`.trim();
     }
 
     if (blockType === 'transition') {
-      return `New transition block focused on reactions after winning or losing the ball.${focusText}${weaknessText}${drillText}`.trim();
+      return `Transition block focused on reactions after winning or losing the ball.${focusText}${weaknessText}${drillText}`.trim();
     }
 
     if (blockType === 'game') {
-      return `New game block aimed at transfer into match situations.${focusText}${strengthText}${drillText}`.trim();
+      return `Game block aimed at transfer into match situations.${focusText}${strengthText}${drillText}`.trim();
     }
 
-    return `New session block generated for the current training focus.${focusText}${drillText}`.trim();
+    return `Session block generated for the current training focus.${focusText}${drillText}`.trim();
   }
 
-  private buildRegeneratedCustomNotes(params: {
+  private buildCustomNotes(params: {
     blockType: string;
     strengths: string[];
     weaknesses: string[];

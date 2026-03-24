@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { apiFetch } from "@/lib/api";
 
@@ -31,12 +32,14 @@ export default function RelatedDrillsButton({
   sessionId,
   blockId,
 }: Props) {
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const [isUsingDrillId, setIsUsingDrillId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const [drills, setDrills] = useState<Drill[]>([]);
 
-  async function handleClick() {
+  async function handleToggle() {
     if (isOpen) {
       setIsOpen(false);
       return;
@@ -66,11 +69,35 @@ export default function RelatedDrillsButton({
     }
   }
 
+  async function handleUseDrill(drillId: string) {
+    try {
+      setIsUsingDrillId(drillId);
+      setErrorMessage("");
+
+      await apiFetch(`/sessions/${sessionId}/blocks/${blockId}/use-drill`, {
+        method: "POST",
+        body: JSON.stringify({ drillId }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      setIsOpen(false);
+      router.refresh();
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "Could not use selected drill.",
+      );
+    } finally {
+      setIsUsingDrillId(null);
+    }
+  }
+
   return (
-    <div style={{ display: "grid", gap: 8, minWidth: 220 }}>
+    <div style={{ display: "grid", gap: 8, minWidth: 240 }}>
       <button
         type="button"
-        onClick={handleClick}
+        onClick={handleToggle}
         disabled={isLoading}
         className="secondary-button"
       >
@@ -111,6 +138,8 @@ export default function RelatedDrillsButton({
                   borderRadius: 12,
                   padding: 12,
                   background: "#f8fafc",
+                  display: "grid",
+                  gap: 8,
                 }}
               >
                 <p
@@ -125,28 +154,41 @@ export default function RelatedDrillsButton({
                 </p>
 
                 {drill.category ? (
-                  <p style={{ margin: "6px 0 0", color: "#64748b", fontSize: 14 }}>
+                  <p style={{ margin: 0, color: "#64748b", fontSize: 14 }}>
                     Category: {drill.category}
                   </p>
                 ) : null}
 
                 {(drill.durationMin ?? drill.durationMinutes) ? (
-                  <p style={{ margin: "6px 0 0", color: "#64748b", fontSize: 14 }}>
+                  <p style={{ margin: 0, color: "#64748b", fontSize: 14 }}>
                     Duration: {drill.durationMin ?? drill.durationMinutes} min
                   </p>
                 ) : null}
 
                 {drill.description ? (
-                  <p style={{ margin: "8px 0 0", color: "#334155", fontSize: 14 }}>
+                  <p style={{ margin: 0, color: "#334155", fontSize: 14 }}>
                     {drill.description}
                   </p>
                 ) : null}
 
                 {drill.coachingPoints ? (
-                  <p style={{ margin: "8px 0 0", color: "#334155", fontSize: 14 }}>
+                  <p style={{ margin: 0, color: "#334155", fontSize: 14 }}>
                     <strong>Coaching points:</strong> {drill.coachingPoints}
                   </p>
                 ) : null}
+
+                <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                  <button
+                    type="button"
+                    onClick={() => handleUseDrill(drill.id)}
+                    disabled={isUsingDrillId === drill.id}
+                    className="secondary-button"
+                  >
+                    {isUsingDrillId === drill.id
+                      ? "Using..."
+                      : "Use this drill"}
+                  </button>
+                </div>
               </div>
             ))
           )}

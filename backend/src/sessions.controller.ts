@@ -322,22 +322,6 @@ export class SessionsController {
     });
   }
 
-  @Post(':sessionId/blocks/:blockId/regenerate')
-  async regenerateBlock(
-    @Param('sessionId') sessionId: string,
-    @Param('blockId') blockId: string,
-  ) {
-    const block = await this.ai.regenerateBlock({
-      sessionId,
-      blockId,
-    });
-
-    return {
-      id: block?.id,
-      block,
-    };
-  }
-
   @Get(':sessionId/blocks/:blockId/related-drills')
   async getRelatedDrills(
     @Param('sessionId') sessionId: string,
@@ -347,5 +331,27 @@ export class SessionsController {
       sessionId,
       blockId,
     });
+  }
+
+  @Post(':sessionId/blocks/:blockId/use-drill')
+  async useDrillForBlock(
+    @Param('sessionId') sessionId: string,
+    @Param('blockId') blockId: string,
+    @Body() body: { drillId?: string },
+  ) {
+    if (!body?.drillId) {
+      throw new Error('drillId is required');
+    }
+
+    const block = await this.ai.useDrillForBlock({
+      sessionId,
+      blockId,
+      drillId: body.drillId,
+    });
+
+    return {
+      id: block?.id,
+      block,
+    };
   }
 }

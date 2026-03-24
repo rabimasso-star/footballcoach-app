@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { API_BASE_URL } from "@/lib/api";
-import RegenerateBlockButton from "@/components/regenerate-block-button";
 import RelatedDrillsButton from "@/components/related-drills-button";
 
 type Drill = {
@@ -216,7 +215,10 @@ export default async function SessionDetailPage({
         >
           <InfoCard label="Date" value={formatDate(session.date)} />
           <InfoCard label="Duration" value={`${session.durationMinutes} min`} />
-          <InfoCard label="Intensity" value={formatIntensity(session.intensity)} />
+          <InfoCard
+            label="Intensity"
+            value={formatIntensity(session.intensity)}
+          />
         </div>
 
         {session.mainFocusTags ? (
@@ -296,11 +298,6 @@ export default async function SessionDetailPage({
                     {block.durationMinutes} min
                   </div>
 
-                  <RegenerateBlockButton
-                    sessionId={session.id}
-                    blockId={block.id}
-                  />
-
                   <RelatedDrillsButton
                     sessionId={session.id}
                     blockId={block.id}
@@ -327,7 +324,8 @@ export default async function SessionDetailPage({
                     const hasLayout =
                       !!layout &&
                       ((Array.isArray(layout.items) && layout.items.length > 0) ||
-                        (Array.isArray(layout.lines) && layout.lines.length > 0));
+                        (Array.isArray(layout.lines) &&
+                          layout.lines.length > 0));
 
                     return (
                       <div
@@ -397,7 +395,10 @@ export default async function SessionDetailPage({
                                   refY="3"
                                   orient="auto"
                                 >
-                                  <polygon points="0 0, 8 3, 0 6" fill="#0f172a" />
+                                  <polygon
+                                    points="0 0, 8 3, 0 6"
+                                    fill="#0f172a"
+                                  />
                                 </marker>
                               </defs>
 
